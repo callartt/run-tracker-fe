@@ -1,0 +1,33 @@
+/* Add this file to your project and import it in your main.jsx */
+
+/* Fix for Font Awesome icon rendering */
+svg[data-icon] {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    width: 1em !important;
+    height: 1em !important;
+  }
+  
+  /* Essential icon container styles */
+  .icon-container {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Ensure all icons are properly sized */
+  [class^="fa-"], 
+  [class*=" fa-"],
+  [class^="Fa"],
+  [class*="Fa"] {
+    width: 1em !important;
+    height: 1em !important;
+    line-height: 1 !important;
+  }
+  
+  /* Fix for react-icons specific styling */
+  .react-icons {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }

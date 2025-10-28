@@ -1,0 +1,94 @@
+/* @tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-gray-900 dark:bg-background-dark dark:text-gray-100;
+    @apply min-h-screen font-sans antialiased;
+    @apply overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-dark focus:ring-primary;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-secondary text-white hover:bg-secondary-dark focus:ring-secondary;
+  }
+  
+  .btn-outline {
+    @apply btn border border-gray-300 hover:bg-gray-100 focus:ring-gray-500;
+    @apply dark:border-gray-600 dark:hover:bg-gray-800;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden;
+  }
+  
+  .container-mobile {
+    @apply px-4 mx-auto max-w-md;
+  }
+  
+  .input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg;
+    @apply focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none;
+    @apply dark:bg-gray-700 dark:border-gray-600 dark:text-white;
+  }
+}
+
+/* Leaflet Map Customizations */
+.leaflet-container {
+  @apply h-full w-full rounded-lg;
+  z-index: 0;
+}
+
+.leaflet-control-attribution {
+  @apply text-xs;
+}
+
+/* Pulsing heart animation */
+.heart-pulse {
+  transform-origin: center;
+  animation: heartbeat 1s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  15% { transform: scale(1.15); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.15); }
+  60% { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+/* Make the app feel more native on mobile */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Make buttons easier to tap */
+  .btn {
+    @apply py-3 text-base;
+  }
+  
+  /* Prevent text selection */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
