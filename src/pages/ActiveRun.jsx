@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { 
   FaPlay, 
   FaPause, 
-  FaStop, 
-  FaLocationArrow,
+  FaStop,
   FaCrosshairs,
   FaHeartbeat
 } from 'react-icons/fa'
@@ -16,7 +14,6 @@ import useGeolocation from '../hooks/useGeolocation'
 import { formatDistance, formatDuration, calculatePace } from '../utils/calculations'
 
 const ActiveRun = () => {
-  const navigate = useNavigate()
   const { user } = useUser()
   const { 
     startWorkout, 

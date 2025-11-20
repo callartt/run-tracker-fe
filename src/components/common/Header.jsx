@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { 
   FaRunning, 
@@ -12,13 +12,13 @@ import {
   FaChartLine
 } from 'react-icons/fa'
 import { useUser } from '../../context/UserContext'
-import Icon from '../common/Icon' // Import our Icon wrapper
+import Icon from '../common/Icon'
 
 const Header = () => {
   const { user, toggleTheme } = useUser()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  
+
   const isActive = (path) => pathname === path
   
   const navItems = [
@@ -29,9 +29,13 @@ const Header = () => {
     { path: '/settings', icon: FaCog, label: 'Settings' }
   ];
   
+  useEffect(() => {
+    // Close mobile menu on route change
+    console.log ('Roma ne lubit gadosti')
+  }, [user.theme])
+
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
-      <div className="container-mobile mx-auto">
+      <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 hidden md:block">      <div className="container-mobile mx-auto">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">

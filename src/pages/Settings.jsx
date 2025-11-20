@@ -20,11 +20,9 @@ const Settings = () => {
     height: user.height || 175,
     gender: user.gender || 'not specified',
     maxHeartRate: user.maxHeartRate || 190,
-    notificationsEnabled: user.notificationsEnabled || true
   })
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     
@@ -34,11 +32,9 @@ const Settings = () => {
     }))
   }
   
-  // Save profile changes
   const handleSaveProfile = (e) => {
     e.preventDefault()
     
-    // Convert string inputs to appropriate types
     const updatedProfile = {
       ...formData,
       age: Number(formData.age),
@@ -47,22 +43,17 @@ const Settings = () => {
       maxHeartRate: Number(formData.maxHeartRate)
     }
     
-    // Update user profile
     updateUserProfile(updatedProfile)
     
-    // Update heart rate zones based on max heart rate
     updateHeartRateZones(updatedProfile.maxHeartRate)
     
-    // Show confirmation
     setShowSaveConfirmation(true)
     setTimeout(() => setShowSaveConfirmation(false), 3000)
   }
   
-  // Calculate estimated max heart rate
   const calculateMaxHR = () => {
     if (!formData.age) return
     
-    // Use the common 220 - age formula
     const estimatedMaxHR = 220 - Number(formData.age)
     
     setFormData(prev => ({
