@@ -15,20 +15,17 @@ export const AuthProvider = ({ children }) => {
             const storedToken = localStorage.getItem('token');
             if (storedToken) {
                 try {
-                    // Verify token or fetch user profile if needed
-                    // For now, we'll assume if token exists, we are authenticated
-                    // You might want to add a /me endpoint call here to validate
                     setToken(storedToken);
+                    // Fetch user profile from backend
+                    const response = await api.get('/users/me');
+                    setUser(response.data);
                     setIsAuthenticated(true);
-
-                    // Optional: Load user data if stored
-                    const storedUser = localStorage.getItem('user_data');
-                    if (storedUser) {
-                        setUser(JSON.parse(storedUser));
-                    }
                 } catch (err) {
                     console.error("Failed to load user", err);
-                    logout();
+                    // If 401, the interceptor might have already handled it, but good to be safe
+                    if (err.response && err.response.status === 401) {
+                        logout();
+                    }
                 }
             }
             setLoading(false);
@@ -41,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(true);
         setError(null);
         try {
-            
+
             const response = await api.post('/auth/sign-in', {
                 email: email,
                 password: password
@@ -51,14 +48,19 @@ export const AuthProvider = ({ children }) => {
 
             localStorage.setItem('token', access_token);
             setToken(access_token);
-            setIsAuthenticated(true);
 
-            // Ideally fetch user details here
-            // const userResponse = await api.get('/users/me');
-            // setUser(userResponse.data);
-            // localStorage.setItem('user_data', JSON.stringify(userResponse.data));
+            // Fetch user details immediately after login
+            try {
+                const userResponse = await api.get('/users/me');
+                setUser(userResponse.data);
+                setIsAuthenticated(true);
+                return true;
+            } catch (userErr) {
+                console.error("Failed to fetch user details after login", userErr);
+                setError("Login successful but failed to load user profile");
+                return false;
+            }
 
-            return true;
         } catch (err) {
             setError(err.response?.data?.detail || 'Login failed');
             return false;
@@ -75,6 +77,21 @@ export const AuthProvider = ({ children }) => {
             return true;
         } catch (err) {
             setError(err.response?.data?.detail || 'Registration failed');
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateUser = async (updateData) => {
+        setLoading(true);
+        try {
+            const response = await api.patch('/users/me', updateData);
+            setUser(prev => ({ ...prev, ...response.data }));
+            return true;
+        } catch (err) {
+            console.error("Failed to update user", err);
+            setError(err.response?.data?.detail || 'Update failed');
             return false;
         } finally {
             setLoading(false);
@@ -98,7 +115,8 @@ export const AuthProvider = ({ children }) => {
             error,
             login,
             register,
-            logout
+            logout,
+            updateUser
         }}>
             {children}
         </AuthContext.Provider>

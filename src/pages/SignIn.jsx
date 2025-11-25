@@ -13,6 +13,8 @@ const SignIn = () => {
         const success = await login(email, password);
         if (success) {
             navigate('/');
+        } else {
+            console.log("Login failed");
         }
     };
 
