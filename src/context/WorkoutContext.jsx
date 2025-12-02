@@ -90,8 +90,8 @@ export const WorkoutProvider = ({ children }) => {
       const trimmedWorkouts = workouts.map(workout => ({
         ...workout,
         route: workout.route && workout.route.length > 100
-            ? workout.route.filter((_, i) => i % Math.ceil(workout.route.length / 100) === 0)
-            : workout.route || [],
+          ? workout.route.filter((_, i) => i % Math.ceil(workout.route.length / 100) === 0)
+          : workout.route || [],
       }))
 
       const workoutsJson = JSON.stringify(trimmedWorkouts)
@@ -165,7 +165,7 @@ export const WorkoutProvider = ({ children }) => {
     setHeartRateData(prev => [...prev, { bpm, timestamp: new Date().toISOString() }])
   }
 
-  const finishWorkout = () => {
+  const finishWorkout = async () => {
     if (!activeWorkout) return null
 
     stopTracking()
@@ -199,10 +199,38 @@ export const WorkoutProvider = ({ children }) => {
       isActive: false,
     }
 
-    setWorkouts(prev => [finalWorkout, ...prev])
-    setActiveWorkout(null)
+    // Try to save to backend
+    try {
+      const payload = {
+        name: activeWorkout.name,
+        start_time: activeWorkout.startTime,
+        end_time: endTime,
+        duration: duration / 60, // Convert seconds to minutes
+        distance: distance / 1000, // Convert meters to kilometers
+        calories: finalCalories,
+        route: route.length > 0 ? route : null,
+      }
 
-    return finalWorkout
+      const response = await api.post('/runs/', payload)
+
+      // Update the workout with backend UUID
+      const savedWorkout = {
+        ...finalWorkout,
+        id: response.data.uuid,
+      }
+
+      setWorkouts(prev => [savedWorkout, ...prev])
+      setActiveWorkout(null)
+
+      return savedWorkout
+    } catch (error) {
+      console.error('Error saving run to backend:', error)
+      // Fallback to local-only save
+      setWorkouts(prev => [finalWorkout, ...prev])
+      setActiveWorkout(null)
+
+      return finalWorkout
+    }
   }
 
   const renameWorkout = (id, newName) => {

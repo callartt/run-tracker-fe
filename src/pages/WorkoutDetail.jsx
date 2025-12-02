@@ -247,33 +247,6 @@ const WorkoutDetail = () => {
         </div>
       </div>
       
-      {workout.avgHeartRate > 0 && (
-        <div className="card p-4 mt-4">
-          <h3 className="text-lg font-medium mb-3">Heart Rate</h3>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Average</div>
-              <div className="flex items-center">
-                <FaHeartbeat className="text-red-500 mr-1" />
-                <span className="text-xl font-bold">{workout.avgHeartRate}</span>
-                <span className="text-gray-500 ml-1">bpm</span>
-              </div>
-            </div>
-            
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Max</div>
-              <div className="flex items-center">
-                <FaHeartbeat className="text-red-500 mr-1" />
-                <span className="text-xl font-bold">{workout.maxHeartRate}</span>
-                <span className="text-gray-500 ml-1">bpm</span>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-      )}
-      
       <div className="flex mt-6 space-x-2">
         <button
           onClick={handleShare}
