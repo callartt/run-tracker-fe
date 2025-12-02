@@ -116,7 +116,7 @@ const Goals = () => {
   return (
     <div className="pb-16">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Goals</h1>
+        <h1 className="text-2xl font-bold pr-5">Goals</h1>
         <button
           onClick={() => setShowNewGoalForm(true)}
           className="btn-primary flex items-center"
@@ -223,8 +223,7 @@ const Goals = () => {
                       <h3 className="font-medium">
                         {formatGoalTarget(goal)}
                         {' '}
-                        {goal.type === GoalTypes.DISTANCE ? 'distance' : 
-                          goal.type === GoalTypes.DURATION ? 'duration' : 'runs'}
+                        {goal.type === GoalTypes.DURATION ? 'minutes' : ''}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {getGoalPeriodText(goal.period)}
