@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { 
-  FaSun, 
-  FaMoon, 
-  FaRuler, 
+import { useState, useEffect } from 'react'
+import {
+  FaSun,
+  FaMoon,
+  FaRuler,
   FaWeight,
   FaHeartbeat,
   FaBell,
@@ -10,50 +10,91 @@ import {
   FaCheck
 } from 'react-icons/fa'
 import { useUser } from '../context/UserContext'
+import { useAuth } from '../context/AuthContext'
 
 const Settings = () => {
-  const { user, updateUserProfile, updateHeartRateZones, toggleTheme, toggleUnits } = useUser()
+  const { user: localUser, updateHeartRateZones, toggleTheme, toggleUnits, updateUserProfile: updateLocalUserProfile } = useUser()
+  const { user: authUser, updateUser } = useAuth()
+
   const [formData, setFormData] = useState({
-    name: user.name || '',
-    age: user.age || 30,
-    weight: user.weight || 70,
-    height: user.height || 175,
-    gender: user.gender || 'not specified',
-    maxHeartRate: user.maxHeartRate || 190,
+    username: localUser.username || '',
+    age: localUser.age || 30,
+    weight: localUser.weight || 70,
+    height: localUser.height || 175,
+    gender: localUser.gender || 'not specified',
+    maxHeartRate: localUser.maxHeartRate || 190,
   })
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
-  
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Initialize form data from authUser when available
+  useEffect(() => {
+    if (authUser) {
+      setFormData(prev => ({
+        ...prev,
+        username: authUser.username || '',
+        age: authUser.age || 30,
+        weight: authUser.weight || 70,
+        height: authUser.height || 175,
+        gender: authUser.gender || 'not specified',
+        // These might not be in backend yet, so fallback to local or default
+        maxHeartRate: localUser.maxHeartRate || 190,
+        notificationsEnabled: localUser.notificationsEnabled || true
+      }))
+    }
+  }, [authUser, localUser.maxHeartRate, localUser.notificationsEnabled])
+
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
   }
-  
-  const handleSaveProfile = (e) => {
+
+  // Save profile changes
+  const handleSaveProfile = async (e) => {
     e.preventDefault()
-    
+    setIsSaving(true)
+
+    // Convert string inputs to appropriate types
     const updatedProfile = {
-      ...formData,
+      username: formData.username,
       age: Number(formData.age),
       weight: Number(formData.weight),
       height: Number(formData.height),
-      maxHeartRate: Number(formData.maxHeartRate)
+      gender: formData.gender,
     }
-    
-    updateUserProfile(updatedProfile)
-    
-    updateHeartRateZones(updatedProfile.maxHeartRate)
-    
-    setShowSaveConfirmation(true)
-    setTimeout(() => setShowSaveConfirmation(false), 3000)
+
+    // Update backend
+    const success = await updateUser(updatedProfile)
+
+    if (success) {
+      // Update local context for things not yet in backend or for immediate UI feedback if needed
+      // We also update maxHeartRate locally as it's not in backend yet
+      updateLocalUserProfile({
+        ...updatedProfile,
+        maxHeartRate: Number(formData.maxHeartRate),
+        notificationsEnabled: formData.notificationsEnabled
+      })
+
+      // Update heart rate zones based on max heart rate (local calculation)
+      updateHeartRateZones(Number(formData.maxHeartRate))
+
+      // Show confirmation
+      setShowSaveConfirmation(true)
+      setTimeout(() => setShowSaveConfirmation(false), 3000)
+    }
+    setIsSaving(false)
   }
   
+  // Calculate estimated max heart rate
   const calculateMaxHR = () => {
     if (!formData.age) return
     
+    // Use the common 220 - age formula
     const estimatedMaxHR = 220 - Number(formData.age)
     
     setFormData(prev => ({
@@ -61,98 +102,59 @@ const Settings = () => {
       maxHeartRate: estimatedMaxHR
     }))
   }
-  
+
   return (
     <div className="pb-16">
       <h1 className="text-2xl font-bold mb-4">Settings</h1>
-      
+
       {/* Display Settings */}
       <div className="card p-4 mb-4">
         <h2 className="text-lg font-medium mb-3">Display</h2>
-        
+
         <div className="space-y-4">
           {/* Theme Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              {user.theme === 'dark' ? <FaMoon className="mr-3 text-blue-400" /> : <FaSun className="mr-3 text-yellow-500" />}
+              {localUser.theme === 'dark' ? <FaMoon className="mr-3 text-blue-400" /> : <FaSun className="mr-3 text-yellow-500" />}
               <span>Theme</span>
             </div>
-            
+
             <button
               onClick={toggleTheme}
               className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              style={{ backgroundColor: user.theme === 'dark' ? '#3B82F6' : '#D1D5DB' }}
+              style={{ backgroundColor: localUser.theme === 'dark' ? '#3B82F6' : '#D1D5DB' }}
             >
               <span
-                className={`${
-                  user.theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
-              />
-            </button>
-          </div>
-          
-          {/* Units Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <FaRuler className="mr-3 text-gray-500" />
-              <span>Distance Units</span>
-            </div>
-            
-            <button
-              onClick={toggleUnits}
-              className="btn-outline text-sm py-1"
-            >
-              {user.units === 'metric' ? 'Metric (km)' : 'Imperial (mi)'}
-            </button>
-          </div>
-          
-          {/* Notifications Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <FaBell className="mr-3 text-gray-500" />
-              <span>Notifications</span>
-            </div>
-            
-            <button
-              onClick={() => {
-                const updated = !user.notificationsEnabled
-                updateUserProfile({ notificationsEnabled: updated })
-              }}
-              className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              style={{ backgroundColor: user.notificationsEnabled ? '#3B82F6' : '#D1D5DB' }}
-            >
-              <span
-                className={`${
-                  user.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
+                className={`${localUser.theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                  } inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
               />
             </button>
           </div>
         </div>
       </div>
-      
+
       {/* User Profile Form */}
       <form onSubmit={handleSaveProfile}>
         <div className="card p-4 mb-4">
           <h2 className="text-lg font-medium mb-3">Profile</h2>
-          
+
           <div className="space-y-4">
-            {/* Name */}
+            {/* Username */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-1">
-                Name
+              <label htmlFor="username" className="block text-sm font-medium mb-1">
+                Username
               </label>
               <input
                 type="text"
-                id="name"
-                name="name"
-                value={formData.name}
+                id="username"
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
                 className="input"
-                placeholder="Your name"
+                placeholder="Your username"
               />
             </div>
-            
+
             {/* Age */}
             <div>
               <label htmlFor="age" className="block text-sm font-medium mb-1">
@@ -169,7 +171,7 @@ const Settings = () => {
                 max="120"
               />
             </div>
-            
+
             {/* Gender */}
             <div>
               <label htmlFor="gender" className="block text-sm font-medium mb-1">
@@ -188,12 +190,12 @@ const Settings = () => {
                 <option value="other">Other</option>
               </select>
             </div>
-            
+
             {/* Height */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label htmlFor="height" className="block text-sm font-medium mb-1">
-                  Height ({user.units === 'metric' ? 'cm' : 'in'})
+                  Height ({localUser.units === 'metric' ? 'cm' : 'in'})
                 </label>
                 <input
                   type="number"
@@ -206,11 +208,11 @@ const Settings = () => {
                   max="300"
                 />
               </div>
-              
+
               {/* Weight */}
               <div>
                 <label htmlFor="weight" className="block text-sm font-medium mb-1">
-                  Weight ({user.units === 'metric' ? 'kg' : 'lb'})
+                  Weight ({localUser.units === 'metric' ? 'kg' : 'lb'})
                 </label>
                 <input
                   type="number"
@@ -227,17 +229,17 @@ const Settings = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Heart Rate Settings */}
         <div className="card p-4 mb-4">
           <h2 className="text-lg font-medium mb-3">Heart Rate</h2>
-          
+
           <div className="space-y-4">
             <div className="flex items-center">
               <FaHeartbeat className="text-red-500 mr-2" />
               <span className="text-sm">These settings help calculate your heart rate zones and calories burned.</span>
             </div>
-            
+
             <div>
               <label htmlFor="maxHeartRate" className="block text-sm font-medium mb-1">
                 Maximum Heart Rate (bpm)
@@ -265,48 +267,49 @@ const Settings = () => {
                 Typical max HR is calculated as 220 - age
               </p>
             </div>
-            
+
             {/* Heart Rate Zones Info */}
             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
               <div className="flex items-center mb-2">
                 <FaInfoCircle className="text-primary mr-2" />
                 <h3 className="font-medium">Your Heart Rate Zones</h3>
               </div>
-              
+
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-blue-500">Recovery</span>
-                  <span>{user.heartRateZones.recovery.min}-{user.heartRateZones.recovery.max} bpm</span>
+                  <span>{localUser.heartRateZones.recovery.min}-{localUser.heartRateZones.recovery.max} bpm</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-green-500">Aerobic</span>
-                  <span>{user.heartRateZones.aerobic.min}-{user.heartRateZones.aerobic.max} bpm</span>
+                  <span>{localUser.heartRateZones.aerobic.min}-{localUser.heartRateZones.aerobic.max} bpm</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-yellow-500">Tempo</span>
-                  <span>{user.heartRateZones.tempo.min}-{user.heartRateZones.tempo.max} bpm</span>
+                  <span>{localUser.heartRateZones.tempo.min}-{localUser.heartRateZones.tempo.max} bpm</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-orange-500">Threshold</span>
-                  <span>{user.heartRateZones.threshold.min}-{user.heartRateZones.threshold.max} bpm</span>
+                  <span>{localUser.heartRateZones.threshold.min}-{localUser.heartRateZones.threshold.max} bpm</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-red-500">Anaerobic</span>
-                  <span>{user.heartRateZones.anaerobic.min}-{user.heartRateZones.anaerobic.max} bpm</span>
+                  <span>{localUser.heartRateZones.anaerobic.min}-{localUser.heartRateZones.anaerobic.max} bpm</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Save Button */}
         <button
           type="submit"
-          className="btn-primary w-full py-3"
+          disabled={isSaving}
+          className="btn-primary w-full py-3 disabled:opacity-50"
         >
-          Save Settings
+          {isSaving ? 'Saving...' : 'Save Settings'}
         </button>
-        
+
         {/* Save Confirmation */}
         {showSaveConfirmation && (
           <div className="fixed bottom-20 inset-x-0 flex justify-center">
@@ -317,7 +320,7 @@ const Settings = () => {
           </div>
         )}
       </form>
-      
+
       {/* App Info */}
       <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
         <div>Run Tracker App</div>

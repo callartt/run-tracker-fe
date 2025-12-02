@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import useGeolocation from '../hooks/useGeolocation'
 import GeoSimulator from '../utils/GeoSimulator'
 import { calculatePace, calculateCalories } from '../utils/calculations'
+import api from '../api/axios';
 
 export const WorkoutContext = createContext(null)
 
@@ -10,24 +11,64 @@ export const WorkoutProvider = ({ children }) => {
   const [workouts, setWorkouts] = useState([])
   const [activeWorkout, setActiveWorkout] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
-  
+
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentHeartRate, setCurrentHeartRate] = useState(0)
   const [heartRateData, setHeartRateData] = useState([])
 
-  const { 
-    position, 
-    route, 
-    distance, 
-    error: geoError, 
-    startTracking, 
-    stopTracking, 
-    getCurrentPosition 
+  const {
+    position,
+    route,
+    distance,
+    error: geoError,
+    startTracking,
+    stopTracking,
+    getCurrentPosition
   } = useGeolocation(isRunning && !isPaused)
 
   const timerRef = useRef(null)
+
+  // Load workouts from API
+  const fetchWorkouts = async (filters = {}) => {
+    setIsLoading(true);
+    try {
+      const params = {
+        limit: 10000,
+        ...filters
+      };
+
+      const response = await api.get('/runs/', { params });
+
+      const fetchedWorkouts = response.data.runs.map(run => ({
+        id: run.uuid,
+        name: run.name,
+        startTime: run.start_time,
+        endTime: run.end_time,
+        duration: run.duration * 60, // Convert minutes to seconds for frontend
+        distance: run.distance * 1000, // Convert km to meters for frontend
+        calories: run.calories,
+        route: run.route || [],
+        // Fields not supported by backend yet, set defaults
+        isActive: false,
+        heartRateData: [],
+        avgHeartRate: 0,
+        maxHeartRate: 0
+      }));
+
+      setWorkouts(fetchedWorkouts);
+    } catch (error) {
+      console.error('Error loading workouts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
 
   useEffect(() => {
     try {
@@ -78,11 +119,11 @@ export const WorkoutProvider = ({ children }) => {
     if (isRunning && !isPaused) {
       timerRef.current = setInterval(() => {
         setDuration(prev => prev + 1)
-        
+
         const simulatedBpm = Math.floor(Math.random() * (150 - 130 + 1) + 130)
         setCurrentHeartRate(simulatedBpm)
         setHeartRateData(prev => [...prev, { bpm: simulatedBpm, timestamp: new Date().toISOString() }])
-        
+
       }, 1000)
     } else {
       clearInterval(timerRef.current)
@@ -93,7 +134,7 @@ export const WorkoutProvider = ({ children }) => {
   const startWorkout = () => {
     const now = new Date()
     const newWorkoutId = uuidv4()
-    
+
     const initialWorkoutData = {
       id: newWorkoutId,
       name: `Run ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
@@ -107,7 +148,7 @@ export const WorkoutProvider = ({ children }) => {
     setIsPaused(false)
     setActiveWorkout(initialWorkoutData)
     startTracking()
-    
+
     return initialWorkoutData
   }
 
@@ -133,7 +174,7 @@ export const WorkoutProvider = ({ children }) => {
     setIsPaused(false)
 
     const endTime = new Date().toISOString()
-    
+
     let avgHeartRate = 0
     let maxHeartRate = 0
 
@@ -150,7 +191,7 @@ export const WorkoutProvider = ({ children }) => {
       endTime,
       duration,
       distance,
-      route, 
+      route,
       avgHeartRate,
       maxHeartRate,
       calories: finalCalories,
@@ -184,8 +225,8 @@ export const WorkoutProvider = ({ children }) => {
     return shareId
   }
 
-  const currentPace = position?.speed 
-    ? calculatePace(position.speed, 'metric') 
+  const currentPace = position?.speed
+    ? calculatePace(position.speed, 'metric')
     : calculatePace(distance / duration || 0, 'metric')
 
   const currentCalories = calculateCalories(75, duration / 60, currentHeartRate || 140, 'male', 25)
@@ -194,6 +235,7 @@ export const WorkoutProvider = ({ children }) => {
     <WorkoutContext.Provider
       value={{
         workouts,
+        fetchWorkouts,
         activeWorkout,
         isLoading,
         isRunning,
@@ -213,7 +255,7 @@ export const WorkoutProvider = ({ children }) => {
         deleteWorkout,
         shareWorkout,
         renameWorkout,
-        addHeartRateData, 
+        addHeartRateData,
         getCurrentPosition
       }}
     >
