@@ -17,13 +17,12 @@ const Settings = () => {
   const { user: authUser, updateUser } = useAuth()
 
   const [formData, setFormData] = useState({
-    username: '',
-    age: 30,
-    weight: 70,
-    height: 175,
-    gender: 'not specified',
-    maxHeartRate: 190,
-    notificationsEnabled: true
+    username: localUser.username || '',
+    age: localUser.age || 30,
+    weight: localUser.weight || 70,
+    height: localUser.height || 175,
+    gender: localUser.gender || 'not specified',
+    maxHeartRate: localUser.maxHeartRate || 190,
   })
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -90,14 +89,14 @@ const Settings = () => {
     }
     setIsSaving(false)
   }
-
+  
   // Calculate estimated max heart rate
   const calculateMaxHR = () => {
     if (!formData.age) return
-
+    
     // Use the common 220 - age formula
     const estimatedMaxHR = 220 - Number(formData.age)
-
+    
     setFormData(prev => ({
       ...prev,
       maxHeartRate: estimatedMaxHR

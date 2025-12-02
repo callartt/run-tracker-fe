@@ -1,7 +1,7 @@
 {
     "name": "Run Tracker",
     "short_name": "RunTracker",
-    "description": "Track your outdoor runs with GPS and heart rate monitoring",
+    "description": "Track your outdoor runs with GPS and",
     "icons": [
       {
         "src": "icons/icon-72x72.png",

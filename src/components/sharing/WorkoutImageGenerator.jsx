@@ -219,21 +219,6 @@ const WorkoutImageGenerator = ({ workout, user, onImageGenerated }) => {
       ctx.font = '24px Arial';
       ctx.fillText('Pace', statsX + 60, statsY + statsSpacing * 2 + 30);
       
-      // Heart Rate (if available)
-      if (workout.avgHeartRate) {
-        ctx.fillStyle = '#EF4444'; // Red for heart rate
-        ctx.font = '36px Arial';
-        ctx.fillText('❤️', statsX, statsY + statsSpacing * 3); // Using emoji as fallback
-        
-        ctx.fillStyle = user?.theme === 'dark' ? '#FFFFFF' : '#111827';
-        ctx.font = 'bold 36px Arial';
-        ctx.fillText(`${workout.avgHeartRate} bpm`, statsX + 60, statsY + statsSpacing * 3);
-        
-        ctx.fillStyle = user?.theme === 'dark' ? '#9CA3AF' : '#6B7280';
-        ctx.font = '24px Arial';
-        ctx.fillText('Heart Rate', statsX + 60, statsY + statsSpacing * 3 + 30);
-      }
-      
       // Footer with app URL
       ctx.fillStyle = user?.theme === 'dark' ? '#9CA3AF' : '#6B7280';
       ctx.font = '20px Arial';

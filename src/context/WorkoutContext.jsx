@@ -1,14 +1,34 @@
-// src/context/WorkoutContext.jsx
-import { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { v4 as uuidv4 } from 'uuid'
+import useGeolocation from '../hooks/useGeolocation'
+import GeoSimulator from '../utils/GeoSimulator'
+import { calculatePace, calculateCalories } from '../utils/calculations'
 import api from '../api/axios';
 
-const WorkoutContext = createContext(null);
+export const WorkoutContext = createContext(null)
 
 export const WorkoutProvider = ({ children }) => {
-  const [workouts, setWorkouts] = useState([]);
-  const [activeWorkout, setActiveWorkout] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [workouts, setWorkouts] = useState([])
+  const [activeWorkout, setActiveWorkout] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const [isRunning, setIsRunning] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [currentHeartRate, setCurrentHeartRate] = useState(0)
+  const [heartRateData, setHeartRateData] = useState([])
+
+  const {
+    position,
+    route,
+    distance,
+    error: geoError,
+    startTracking,
+    stopTracking,
+    getCurrentPosition
+  } = useGeolocation(isRunning && !isPaused)
+
+  const timerRef = useRef(null)
 
   // Load workouts from API
   const fetchWorkouts = async (filters = {}) => {
@@ -50,192 +70,194 @@ export const WorkoutProvider = ({ children }) => {
     fetchWorkouts();
   }, []);
 
-  // Start a new workout session
+  useEffect(() => {
+    try {
+      const storedWorkouts = localStorage.getItem('workouts')
+      if (storedWorkouts) {
+        setWorkouts(JSON.parse(storedWorkouts))
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isLoading) return
+
+    try {
+      const trimmedWorkouts = workouts.map(workout => ({
+        ...workout,
+        route: workout.route && workout.route.length > 100
+          ? workout.route.filter((_, i) => i % Math.ceil(workout.route.length / 100) === 0)
+          : workout.route || [],
+      }))
+
+      const workoutsJson = JSON.stringify(trimmedWorkouts)
+      const currentStorage = localStorage.getItem('workouts')
+
+      if (currentStorage !== workoutsJson) {
+        localStorage.setItem('workouts', workoutsJson)
+      }
+    } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        try {
+          const reducedWorkouts = workouts.slice(0, 5).map(w => ({
+            ...w,
+            route: [],
+          }))
+          localStorage.setItem('workouts', JSON.stringify(reducedWorkouts))
+        } catch (fallbackError) {
+          console.error(fallbackError)
+        }
+      }
+    }
+  }, [workouts, isLoading])
+
+  useEffect(() => {
+    if (isRunning && !isPaused) {
+      timerRef.current = setInterval(() => {
+        setDuration(prev => prev + 1)
+
+        const simulatedBpm = Math.floor(Math.random() * (150 - 130 + 1) + 130)
+        setCurrentHeartRate(simulatedBpm)
+        setHeartRateData(prev => [...prev, { bpm: simulatedBpm, timestamp: new Date().toISOString() }])
+
+      }, 1000)
+    } else {
+      clearInterval(timerRef.current)
+    }
+    return () => clearInterval(timerRef.current)
+  }, [isRunning, isPaused])
+
   const startWorkout = () => {
-    const newWorkout = {
-      id: uuidv4(), // Temporary ID until saved to backend
-      name: `Run ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
-      startTime: new Date().toISOString(),
-      isActive: true,
-      route: [],
-      heartRateData: [],
-      distance: 0,
-      duration: 0,
-      avgHeartRate: 0,
-      maxHeartRate: 0,
-      calories: 0,
-    };
+    const now = new Date()
+    const newWorkoutId = uuidv4()
 
-    setActiveWorkout(newWorkout);
-    return newWorkout;
-  };
-
-  // Update the active workout with new data
-  const updateActiveWorkout = (data) => {
-    if (!activeWorkout) return;
-
-    setActiveWorkout(prev => ({
-      ...prev,
-      ...data,
-      lastUpdated: new Date().toISOString()
-    }));
-  };
-
-  // Add a GPS point to the route
-  const addRoutePoint = (position) => {
-    if (!activeWorkout) return;
-
-    const { latitude, longitude, accuracy, altitude, speed, timestamp } = position;
-
-    setActiveWorkout(prev => ({
-      ...prev,
-      route: [
-        ...(prev && prev.route ? prev.route : []),
-        {
-          lat: latitude,
-          lng: longitude,
-          accuracy,
-          altitude,
-          speed,
-          timestamp
-        }
-      ]
-    }));
-  };
-
-  // Add heart rate data point
-  const addHeartRateData = (bpm) => {
-    if (!activeWorkout) return;
-
-    setActiveWorkout(prev => ({
-      ...prev,
-      heartRateData: [
-        ...(prev.heartRateData || []),
-        {
-          bpm,
-          timestamp: new Date().toISOString()
-        }
-      ],
-      currentHeartRate: bpm
-    }));
-  };
-
-  // Finish workout function
-  const finishWorkout = async () => {
-    if (!activeWorkout) return null;
-
-    const endTime = new Date().toISOString();
-
-    // Calculate summary stats
-    const duration = Math.round((new Date(endTime) - new Date(activeWorkout.startTime)) / 1000); // in seconds
-
-    // Calculate average heart rate if data exists
-    let avgHeartRate = 0;
-    let maxHeartRate = 0;
-
-    if (activeWorkout.heartRateData && activeWorkout.heartRateData.length > 0) {
-      const sum = activeWorkout.heartRateData.reduce((acc, data) => acc + data.bpm, 0);
-      avgHeartRate = Math.round(sum / activeWorkout.heartRateData.length);
-      maxHeartRate = Math.max(...activeWorkout.heartRateData.map(data => data.bpm));
+    const initialWorkoutData = {
+      id: newWorkoutId,
+      name: `Run ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
+      startTime: now.toISOString(),
     }
 
-    // Make sure route is defined
-    const route = activeWorkout.route || [];
+    setDuration(0)
+    setHeartRateData([])
+    setCurrentHeartRate(0)
+    setIsRunning(true)
+    setIsPaused(false)
+    setActiveWorkout(initialWorkoutData)
+    startTracking()
 
-    // Finalize the workout object for frontend state
+    return initialWorkoutData
+  }
+
+  const pauseWorkout = () => {
+    setIsPaused(true)
+  }
+
+  const resumeWorkout = () => {
+    setIsPaused(false)
+  }
+
+  const addHeartRateData = (bpm) => {
+    setCurrentHeartRate(bpm)
+    setHeartRateData(prev => [...prev, { bpm, timestamp: new Date().toISOString() }])
+  }
+
+  const finishWorkout = async () => {
+    if (!activeWorkout) return null
+
+    stopTracking()
+    GeoSimulator.stop()
+    setIsRunning(false)
+    setIsPaused(false)
+
+    const endTime = new Date().toISOString()
+
+    let avgHeartRate = 0
+    let maxHeartRate = 0
+
+    if (heartRateData.length > 0) {
+      const sum = heartRateData.reduce((acc, data) => acc + data.bpm, 0)
+      avgHeartRate = Math.round(sum / heartRateData.length)
+      maxHeartRate = Math.max(...heartRateData.map(data => data.bpm))
+    }
+
+    const finalCalories = calculateCalories(75, duration / 60, avgHeartRate || 140, 'male', 25)
+
     const finalWorkout = {
       ...activeWorkout,
       endTime,
       duration,
+      distance,
+      route,
       avgHeartRate,
       maxHeartRate,
-      distance: activeWorkout.distance || 0,
-      route: route,
-      heartRateData: activeWorkout.heartRateData || [],
-      isActive: false
-    };
+      calories: finalCalories,
+      heartRateData,
+      isActive: false,
+    }
 
-    // Save to backend
+    // Try to save to backend
     try {
       const payload = {
         name: activeWorkout.name,
         start_time: activeWorkout.startTime,
         end_time: endTime,
         duration: duration / 60, // Convert seconds to minutes
-        distance: (activeWorkout.distance || 0) / 1000, // Convert meters to km
-        calories: activeWorkout.calories,
-        route: route
-      };
+        distance: distance / 1000, // Convert meters to kilometers
+        calories: finalCalories,
+        route: route.length > 0 ? route : null,
+      }
 
-      const response = await api.post('/runs/', payload);
-      const savedRun = response.data;
+      const response = await api.post('/runs/', payload)
 
-      // Update with backend ID and data
-      const workoutWithBackendData = {
+      // Update the workout with backend UUID
+      const savedWorkout = {
         ...finalWorkout,
-        id: savedRun.uuid
-      };
+        id: response.data.uuid,
+      }
 
-      setWorkouts(prev => [workoutWithBackendData, ...prev]);
-      setActiveWorkout(null);
-      return workoutWithBackendData;
+      setWorkouts(prev => [savedWorkout, ...prev])
+      setActiveWorkout(null)
+
+      return savedWorkout
     } catch (error) {
-      console.error('Error saving workout:', error);
-      // Fallback: save locally to state so user doesn't lose it immediately, 
-      // but warn or handle error appropriately in UI
-      setWorkouts(prev => [finalWorkout, ...prev]);
-      setActiveWorkout(null);
-      return finalWorkout;
-    }
-  };
+      console.error('Error saving run to backend:', error)
+      // Fallback to local-only save
+      setWorkouts(prev => [finalWorkout, ...prev])
+      setActiveWorkout(null)
 
-  // Rename a workout
-  const renameWorkout = async (id, newName) => {
-    // Optimistic update
+      return finalWorkout
+    }
+  }
+
+  const renameWorkout = (id, newName) => {
     setWorkouts(prev =>
       prev.map(workout =>
-        workout.id === id
-          ? { ...workout, name: newName }
-          : workout
+        workout.id === id ? { ...workout, name: newName } : workout
       )
-    );
+    )
+  }
 
-    try {
-      await api.patch(`/runs/${id}`, { name: newName });
-    } catch (error) {
-      console.error('Error renaming workout:', error);
-      // Revert if needed, or just log error
-    }
-  };
+  const deleteWorkout = id => {
+    setWorkouts(prev => prev.filter(workout => workout.id !== id))
+  }
 
-  // Delete a workout
-  const deleteWorkout = async (id) => {
-    // Optimistic update
-    setWorkouts(prev => prev.filter(workout => workout.id !== id));
+  const shareWorkout = id => {
+    const workout = workouts.find(w => w.id === id)
+    if (!workout) return null
+    const shareId = `share_${workout.id}`
+    setWorkouts(prev => prev.map(w => (w.id === id ? { ...w, shareId } : w)))
+    return shareId
+  }
 
-    try {
-      await api.delete(`/runs/${id}`);
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      // Could revert here if needed
-    }
-  };
+  const currentPace = position?.speed
+    ? calculatePace(position.speed, 'metric')
+    : calculatePace(distance / duration || 0, 'metric')
 
-  // Create a shareable workout (returns share ID)
-  const shareWorkout = (id) => {
-    const workout = workouts.find(w => w.id === id);
-    if (!workout) return null;
-
-    // In a real app, you would send this to a server and get a share ID
-    const shareId = `share_${workout.id}`;
-
-    // For now, we'll just add a shareId to the workout locally
-    setWorkouts(prev =>
-      prev.map(w => w.id === id ? { ...w, shareId } : w)
-    );
-
-    return shareId;
-  };
+  const currentCalories = calculateCalories(75, duration / 60, currentHeartRate || 140, 'male', 25)
 
   return (
     <WorkoutContext.Provider
@@ -244,27 +266,38 @@ export const WorkoutProvider = ({ children }) => {
         fetchWorkouts,
         activeWorkout,
         isLoading,
+        isRunning,
+        isPaused,
+        duration,
+        currentLocation: position,
+        route,
+        distance,
+        currentPace,
+        currentHeartRate,
+        calories: currentCalories,
+        error: geoError,
         startWorkout,
-        updateActiveWorkout,
-        addRoutePoint,
-        addHeartRateData,
+        pauseWorkout,
+        resumeWorkout,
         finishWorkout,
         deleteWorkout,
         shareWorkout,
-        renameWorkout
+        renameWorkout,
+        addHeartRateData,
+        getCurrentPosition
       }}
     >
       {children}
     </WorkoutContext.Provider>
-  );
-};
+  )
+}
 
 export const useWorkout = () => {
-  const context = useContext(WorkoutContext);
-
+  const context = useContext(WorkoutContext)
   if (!context) {
-    throw new Error('useWorkout must be used within a WorkoutProvider');
+    throw new Error('useWorkout must be used within a WorkoutProvider')
   }
+  return context
+}
 
-  return context;
-};
+export default WorkoutContext

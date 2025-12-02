@@ -1,23 +1,20 @@
-// RunMap.jsx
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useUser } from '../../context/UserContext'
-
-const defaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-})
+import { calculateDistance } from '../../utils/calculations'
 
 const defaultMapSettings = {
-  center: [51.505, -0.09],
+  center: [50.4501, 30.5234],
   zoom: 16,
-  maxZoom: 19,
-  minZoom: 3
+}
+
+const getCoords = (point) => {
+  if (!point) return null
+  if (Array.isArray(point) && point.length >= 2) return { lat: point[0], lng: point[1] }
+  if (typeof point.lat === 'number') return { lat: point.lat, lng: point.lng }
+  if (typeof point.latitude === 'number') return { lat: point.latitude, lng: point.longitude }
+  return null
 }
 
 const RunMap = ({ 
@@ -27,50 +24,41 @@ const RunMap = ({
   followPosition = true,
   showMarkers = true,
   mapHeight = 'h-64',
-  onPositionClick = null
 }) => {
   const mapRef = useRef(null)
   const leafletMapRef = useRef(null)
   const routeLayerRef = useRef(null)
   const markersLayerRef = useRef(null)
   const positionMarkerRef = useRef(null)
-  const startPositionRef = useRef(null)
   const { user } = useUser()
 
   useEffect(() => {
     if (!mapRef.current) return
 
     if (!leafletMapRef.current) {
-      leafletMapRef.current = L.map(mapRef.current, {
-        ...defaultMapSettings,
-        zoomControl: false,
-        attributionControl: false
+      leafletMapRef.current = L.map(mapRef.current, { 
+        ...defaultMapSettings, 
+        zoomControl: false, 
+        attributionControl: false 
       })
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(leafletMapRef.current)
-
-      L.control.zoom({ position: 'topright' }).addTo(leafletMapRef.current)
-      L.control.attribution({ position: 'bottomright' }).addTo(leafletMapRef.current)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMapRef.current)
 
       routeLayerRef.current = L.layerGroup().addTo(leafletMapRef.current)
       markersLayerRef.current = L.layerGroup().addTo(leafletMapRef.current)
     }
 
-    if (currentPosition) {
-      const { latitude, longitude } = currentPosition
-      leafletMapRef.current.setView([latitude, longitude], defaultMapSettings.zoom)
+    if (currentPosition && !isActive) {
+      const c = getCoords(currentPosition)
+      if (c) {
+        leafletMapRef.current.setView([c.lat, c.lng], defaultMapSettings.zoom)
+      }
     }
 
     return () => {
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
         leafletMapRef.current = null
-        routeLayerRef.current = null
-        markersLayerRef.current = null
-        positionMarkerRef.current = null
-        startPositionRef.current = null
       }
     }
   }, [])
@@ -78,71 +66,64 @@ const RunMap = ({
   useEffect(() => {
     if (!leafletMapRef.current || !routeLayerRef.current) return
 
-    routeLayerRef.current.eachLayer(layer => {
-      if (layer instanceof L.Polyline && !(layer instanceof L.Circle)) {
-        routeLayerRef.current.removeLayer(layer)
+    routeLayerRef.current.clearLayers()
+
+    if (route && route.length > 0) {
+      const validPoints = route.map(p => getCoords(p)).filter(p => p !== null)
+      if (validPoints.length === 0) return
+
+      const segments = []
+      let currentSegment = []
+
+      for (let i = 0; i < validPoints.length; i++) {
+        const point = validPoints[i]
+
+        if (currentSegment.length === 0) {
+          currentSegment.push([point.lat, point.lng])
+          continue
+        }
+
+        const last = currentSegment[currentSegment.length - 1]
+        const dist = calculateDistance(last[0], last[1], point.lat, point.lng)
+
+        if (dist > 1000) {
+          if (currentSegment.length > 1) segments.push(currentSegment)
+          currentSegment = [[point.lat, point.lng]]
+        } else {
+          currentSegment.push([point.lat, point.lng])
+        }
       }
-    })
+      if (currentSegment.length > 1) segments.push(currentSegment)
 
-    if (route.length > 0) {
-      console.log(`Drawing route with ${route.length} points`)
-      const points = route
-        .filter(point => point && typeof point.latitude === 'number' && typeof point.longitude === 'number')
-        .map(point => [point.latitude, point.longitude]);
+      if (segments.length > 0) {
+        L.polyline(segments, { 
+          color: user.theme === 'dark' ? '#3B82F6' : '#2563EB', 
+          weight: 5,
+          opacity: 0.8,
+          lineCap: 'round'
+        }).addTo(routeLayerRef.current)
 
-      console.log("📍 Drawing polyline with points:", points)
-
-      if (!startPositionRef.current && route.length > 0) {
-        startPositionRef.current = [route[0].latitude, route[0].longitude]
+        if (!isActive) {
+          const allPoints = validPoints.map(p => [p.lat, p.lng])
+          if (allPoints.length > 1) {
+            leafletMapRef.current.fitBounds(L.latLngBounds(allPoints), { padding: [30, 30] })
+          }
+        }
       }
-
-      const routeLine = L.polyline(points, {
-        color: user.theme === 'dark' ? '#3B82F6' : '#2563EB',
-        weight: 4,
-        opacity: 0.8,
-        lineJoin: 'round'
-      }).addTo(routeLayerRef.current)
 
       if (showMarkers && markersLayerRef.current) {
         markersLayerRef.current.clearLayers()
+        if (validPoints.length > 0) {
+          L.circleMarker([validPoints[0].lat, validPoints[0].lng], {
+            radius: 6, color: 'white', fillColor: '#10B981', fillOpacity: 1, weight: 2
+          }).addTo(markersLayerRef.current)
 
-        const startPoint = startPositionRef.current
-        if (startPoint) {
-          const startIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div class="marker-pin bg-green-500 rounded-full w-4 h-4 border-2 border-white shadow-md"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          })
-
-          L.marker(startPoint, { icon: startIcon })
-            .addTo(markersLayerRef.current)
-            .bindTooltip('Start', { permanent: false, direction: 'top' })
-        }
-
-        if (!isActive && points.length > 1) {
-          const endPoint = points[points.length - 1]
-          const endIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div class="marker-pin bg-red-500 rounded-full w-4 h-4 border-2 border-white shadow-md"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          })
-
-          L.marker(endPoint, { icon: endIcon })
-            .addTo(markersLayerRef.current)
-            .bindTooltip('End', { permanent: false, direction: 'top' })
-        }
-      }
-
-      if ((!isActive && route.length > 5) || route.length < 3) {
-        try {
-          leafletMapRef.current.fitBounds(routeLine.getBounds(), {
-            padding: [50, 50],
-            maxZoom: 18
-          })
-        } catch (err) {
-          console.error("Error fitting bounds:", err)
+          if (!isActive) {
+            const last = validPoints[validPoints.length - 1]
+            L.circleMarker([last.lat, last.lng], {
+              radius: 6, color: 'white', fillColor: '#EF4444', fillOpacity: 1, weight: 2
+            }).addTo(markersLayerRef.current)
+          }
         }
       }
     }
@@ -151,61 +132,32 @@ const RunMap = ({
   useEffect(() => {
     if (!leafletMapRef.current || !currentPosition) return
 
-    const { latitude, longitude, accuracy } = currentPosition
+    const c = getCoords(currentPosition)
+    if (!c) return
 
     if (!positionMarkerRef.current) {
-      positionMarkerRef.current = L.circleMarker([latitude, longitude], {
+      positionMarkerRef.current = L.circleMarker([c.lat, c.lng], {
         radius: 8,
         fillColor: '#3B82F6',
         color: '#ffffff',
-        weight: 2,
+        weight: 3,
         opacity: 1,
-        fillOpacity: 0.8
+        fillOpacity: 1
       }).addTo(leafletMapRef.current)
-
-      if (accuracy) {
-        positionMarkerRef.current.accuracyCircle = L.circle([latitude, longitude], {
-          radius: accuracy,
-          weight: 1,
-          color: '#3B82F6',
-          fillColor: '#93C5FD',
-          fillOpacity: 0.15
-        }).addTo(leafletMapRef.current)
-      }
     } else {
-      positionMarkerRef.current.setLatLng([latitude, longitude])
-      if (positionMarkerRef.current.accuracyCircle && accuracy) {
-        positionMarkerRef.current.accuracyCircle.setLatLng([latitude, longitude])
-        positionMarkerRef.current.accuracyCircle.setRadius(accuracy)
-      }
+      positionMarkerRef.current.setLatLng([c.lat, c.lng])
     }
 
     if (isActive && followPosition) {
-      leafletMapRef.current.setView([latitude, longitude], leafletMapRef.current.getZoom())
+      leafletMapRef.current.panTo([c.lat, c.lng], { animate: true, duration: 1 })
     }
   }, [currentPosition, isActive, followPosition])
 
-  useEffect(() => {
-    if (!leafletMapRef.current || !onPositionClick) return
-
-    const handleMapClick = (e) => {
-      onPositionClick({ latitude: e.latlng.lat, longitude: e.latlng.lng })
-    }
-
-    leafletMapRef.current.on('click', handleMapClick)
-
-    return () => {
-      if (leafletMapRef.current) {
-        leafletMapRef.current.off('click', handleMapClick)
-      }
-    }
-  }, [onPositionClick])
-
   return (
-    <div className={`w-full ${mapHeight} rounded-lg overflow-hidden shadow-md my-2`}>
-      <div ref={mapRef} className="h-full w-full" />
+    <div className={`w-full ${mapHeight} rounded-xl overflow-hidden shadow-inner my-2 border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 relative z-0`}>
+      <div ref={mapRef} className="h-full w-full" style={{ minHeight: '100%' }} />
     </div>
   )
 }
 
-export default RunMap;
+export default RunMap

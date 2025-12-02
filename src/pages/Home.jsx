@@ -88,7 +88,7 @@ const Home = () => {
         <FaRunning className="text-primary text-5xl mx-auto mb-4" />
         <h1 className="text-2xl font-bold mb-2">Track Your Run</h1>
         <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Record your outdoor runs with GPS tracking and heart rate monitoring
+          Record your outdoor runs with GPS tracking
         </p>
         
         <button
@@ -294,21 +294,7 @@ const Home = () => {
               </div>
             </div>
           </div>
-          
-          <div className="card p-4">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mr-4">
-                <FaHeartbeat className="text-red-500" />
-              </div>
-              <div>
-                <h3 className="font-medium">Heart Rate Monitoring</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Connect to Bluetooth heart rate monitors to track your intensity
-                </p>
-              </div>
-            </div>
-          </div>
-          
+
           <div className="card p-4">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mr-4">
@@ -335,22 +321,6 @@ const Home = () => {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Bluetooth Compatibility Info */}
-      <div className="mt-6 mb-8 p-4 bg-yellow-50 dark:bg-yellow-900 dark:bg-opacity-20 rounded-lg">
-        <div className="flex items-start">
-          <FaInfoCircle className="text-yellow-600 dark:text-yellow-400 mt-0.5 mr-3 flex-shrink-0" />
-          <div>
-            <h3 className="font-medium text-yellow-800 dark:text-yellow-300">
-              Device Compatibility
-            </h3>
-            <p className="text-sm text-yellow-700 dark:text-yellow-200 mt-1">
-              Heart rate monitoring works on Android devices with Chrome browser. 
-              GPS tracking works on all modern mobile browsers.
-            </p>
           </div>
         </div>
       </div>

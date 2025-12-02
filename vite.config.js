@@ -12,7 +12,7 @@ export default defineConfig({
       manifest: {
         name: 'Run Tracker',
         short_name: 'RunTracker',
-        description: 'Track your outdoor runs with GPS and heart rate monitoring',
+        description: 'Track your outdoor runs with GPS',
         theme_color: '#3B82F6',
         icons: [
           {

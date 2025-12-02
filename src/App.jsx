@@ -7,7 +7,6 @@ import { AuthProvider } from './context/AuthContext';
 import SimulationButton from './components/debug/SimulationButton';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Pages
 import Home from './pages/Home'
 import ActiveRun from './pages/ActiveRun'
 import History from './pages/History'
@@ -20,13 +19,13 @@ import SignUp from './pages/SignUp';
 import Goals from './pages/Goals'
 import Statistics from './pages/Statistics'
 
-// Components
 import Header from './components/common/Header'
 import Footer from './components/common/Footer'
 
 function App() {
   const [onlineStatus, setOnlineStatus] = useState(navigator.onLine)
-  const [showDebug, setShowDebug] = useState(process.env.NODE_ENV === 'development')
+
+  const [showDebug, setShowDebug] = useState(import.meta.env.DEV)
 
   useEffect(() => {
     const handleOnline = () => setOnlineStatus(true)
@@ -41,7 +40,6 @@ function App() {
     }
   }, [])
 
-  // Enable debug mode with a keyboard shortcut (Ctrl+Shift+D)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
