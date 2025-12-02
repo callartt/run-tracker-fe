@@ -1,5 +1,7 @@
+// src/context/WorkoutContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import api from '../api/axios';
 
 const WorkoutContext = createContext(null);
 
@@ -8,73 +10,51 @@ export const WorkoutProvider = ({ children }) => {
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load workouts from localStorage on initial render
-  useEffect(() => {
-    const loadWorkouts = () => {
-      try {
-        const storedWorkouts = localStorage.getItem('workouts');
-        if (storedWorkouts) {
-          setWorkouts(JSON.parse(storedWorkouts));
-        }
-      } catch (error) {
-        console.error('Error loading workouts:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    loadWorkouts();
-  }, []);
-  
-  // Save workouts to localStorage with size limiting to prevent quota errors
-  useEffect(() => {
-    // Only save if not in loading state and there are workouts to save
-    if (!isLoading && workouts.length > 0) {
-      try {
-        // Create a trimmed version of workouts to save space
-        const trimmedWorkouts = workouts.map(workout => {
-          // Create a copy with limited route points
-          return {
-            ...workout,
-            // Limit route to at most 100 points to save space
-            route: workout.route && workout.route.length > 100 
-              ? workout.route.slice(0, 100) 
-              : workout.route || []
-          };
-        });
-        
-        // First stringify to check size
-        const workoutsJson = JSON.stringify(trimmedWorkouts);
-        
-        // Only update if content has actually changed
-        const currentStorage = localStorage.getItem('workouts');
-        if (currentStorage !== workoutsJson) {
-          localStorage.setItem('workouts', workoutsJson);
-        }
-      } catch (error) {
-        console.error('Error saving workouts:', error);
-        // If quota exceeded, try saving fewer workouts
-        if (error.name === 'QuotaExceededError') {
-          try {
-            // Keep only last 5 workouts
-            const reducedWorkouts = workouts.slice(0, 5).map(w => ({
-              ...w,
-              route: [] // Remove routes entirely
-            }));
-            localStorage.setItem('workouts', JSON.stringify(reducedWorkouts));
-          } catch (fallbackError) {
-            console.error('Failed to save even with reduced data:', fallbackError);
-          }
-        }
-      }
+  // Load workouts from API
+  const fetchWorkouts = async (filters = {}) => {
+    setIsLoading(true);
+    try {
+      const params = {
+        limit: 10000,
+        ...filters
+      };
+
+      const response = await api.get('/runs/', { params });
+
+      const fetchedWorkouts = response.data.runs.map(run => ({
+        id: run.uuid,
+        name: run.name,
+        startTime: run.start_time,
+        endTime: run.end_time,
+        duration: run.duration * 60, // Convert minutes to seconds for frontend
+        distance: run.distance * 1000, // Convert km to meters for frontend
+        calories: run.calories,
+        route: run.route || [],
+        // Fields not supported by backend yet, set defaults
+        isActive: false,
+        heartRateData: [],
+        avgHeartRate: 0,
+        maxHeartRate: 0
+      }));
+
+      setWorkouts(fetchedWorkouts);
+    } catch (error) {
+      console.error('Error loading workouts:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [workouts, isLoading]);
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
 
   // Start a new workout session
   const startWorkout = () => {
     const newWorkout = {
-      id: uuidv4(),
-      name: `Run ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, // Default name with date and time
+      id: uuidv4(), // Temporary ID until saved to backend
+      name: `Run ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
       startTime: new Date().toISOString(),
       isActive: true,
       route: [],
@@ -141,18 +121,18 @@ export const WorkoutProvider = ({ children }) => {
   };
 
   // Finish workout function
-  const finishWorkout = () => {
+  const finishWorkout = async () => {
     if (!activeWorkout) return null;
 
     const endTime = new Date().toISOString();
-    
+
     // Calculate summary stats
     const duration = Math.round((new Date(endTime) - new Date(activeWorkout.startTime)) / 1000); // in seconds
-    
+
     // Calculate average heart rate if data exists
     let avgHeartRate = 0;
     let maxHeartRate = 0;
-    
+
     if (activeWorkout.heartRateData && activeWorkout.heartRateData.length > 0) {
       const sum = activeWorkout.heartRateData.reduce((acc, data) => acc + data.bpm, 0);
       avgHeartRate = Math.round(sum / activeWorkout.heartRateData.length);
@@ -161,8 +141,8 @@ export const WorkoutProvider = ({ children }) => {
 
     // Make sure route is defined
     const route = activeWorkout.route || [];
-    
-    // Finalize the workout - ensure all properties are properly initialized
+
+    // Finalize the workout object for frontend state
     const finalWorkout = {
       ...activeWorkout,
       endTime,
@@ -175,27 +155,70 @@ export const WorkoutProvider = ({ children }) => {
       isActive: false
     };
 
-    // Save the workout
-    setWorkouts(prev => [finalWorkout, ...prev]);
-    setActiveWorkout(null);
+    // Save to backend
+    try {
+      const payload = {
+        name: activeWorkout.name,
+        start_time: activeWorkout.startTime,
+        end_time: endTime,
+        duration: duration / 60, // Convert seconds to minutes
+        distance: (activeWorkout.distance || 0) / 1000, // Convert meters to km
+        calories: activeWorkout.calories,
+        route: route
+      };
 
-    return finalWorkout;
+      const response = await api.post('/runs/', payload);
+      const savedRun = response.data;
+
+      // Update with backend ID and data
+      const workoutWithBackendData = {
+        ...finalWorkout,
+        id: savedRun.uuid
+      };
+
+      setWorkouts(prev => [workoutWithBackendData, ...prev]);
+      setActiveWorkout(null);
+      return workoutWithBackendData;
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      // Fallback: save locally to state so user doesn't lose it immediately, 
+      // but warn or handle error appropriately in UI
+      setWorkouts(prev => [finalWorkout, ...prev]);
+      setActiveWorkout(null);
+      return finalWorkout;
+    }
   };
 
-  // NEW FUNCTION: Rename a workout
-  const renameWorkout = (id, newName) => {
-    setWorkouts(prev => 
-      prev.map(workout => 
-        workout.id === id 
-          ? { ...workout, name: newName } 
+  // Rename a workout
+  const renameWorkout = async (id, newName) => {
+    // Optimistic update
+    setWorkouts(prev =>
+      prev.map(workout =>
+        workout.id === id
+          ? { ...workout, name: newName }
           : workout
       )
     );
+
+    try {
+      await api.patch(`/runs/${id}`, { name: newName });
+    } catch (error) {
+      console.error('Error renaming workout:', error);
+      // Revert if needed, or just log error
+    }
   };
 
   // Delete a workout
-  const deleteWorkout = (id) => {
+  const deleteWorkout = async (id) => {
+    // Optimistic update
     setWorkouts(prev => prev.filter(workout => workout.id !== id));
+
+    try {
+      await api.delete(`/runs/${id}`);
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      // Could revert here if needed
+    }
   };
 
   // Create a shareable workout (returns share ID)
@@ -205,9 +228,9 @@ export const WorkoutProvider = ({ children }) => {
 
     // In a real app, you would send this to a server and get a share ID
     const shareId = `share_${workout.id}`;
-    
-    // For now, we'll just add a shareId to the workout
-    setWorkouts(prev => 
+
+    // For now, we'll just add a shareId to the workout locally
+    setWorkouts(prev =>
       prev.map(w => w.id === id ? { ...w, shareId } : w)
     );
 
@@ -218,6 +241,7 @@ export const WorkoutProvider = ({ children }) => {
     <WorkoutContext.Provider
       value={{
         workouts,
+        fetchWorkouts,
         activeWorkout,
         isLoading,
         startWorkout,
@@ -227,7 +251,7 @@ export const WorkoutProvider = ({ children }) => {
         finishWorkout,
         deleteWorkout,
         shareWorkout,
-        renameWorkout // Add the new function to the context
+        renameWorkout
       }}
     >
       {children}
@@ -237,10 +261,10 @@ export const WorkoutProvider = ({ children }) => {
 
 export const useWorkout = () => {
   const context = useContext(WorkoutContext);
-  
+
   if (!context) {
     throw new Error('useWorkout must be used within a WorkoutProvider');
   }
-  
+
   return context;
 };
