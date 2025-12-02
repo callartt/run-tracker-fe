@@ -1,17 +1,8 @@
-// src/context/GoalsContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { useWorkout } from './WorkoutContext';
+import api from '../api/axios';
 
 const GoalsContext = createContext(null);
-
-// Constants for storage keys - makes it easier to stay consistent
-const STORAGE_KEYS = {
-  GOALS: 'goals',
-  ACHIEVEMENTS: 'achievements',
-  GOALS_BACKUP: 'goals_backup',
-  ACHIEVEMENTS_BACKUP: 'achievements_backup'
-};
 
 export const GoalTypes = {
   DISTANCE: 'distance',
@@ -25,171 +16,144 @@ export const GoalPeriods = {
   YEARLY: 'yearly'
 };
 
+// Mappings for API communication
+const API_GOAL_TYPES = {
+  [GoalTypes.DISTANCE]: 'DISTANCE',
+  [GoalTypes.DURATION]: 'DURATION',
+  [GoalTypes.FREQUENCY]: 'NUMBER_OF_RUNS'
+};
+
+const API_GOAL_PERIODS = {
+  [GoalPeriods.WEEKLY]: 'WEEKLY',
+  [GoalPeriods.MONTHLY]: 'MONTHLY',
+  [GoalPeriods.YEARLY]: 'YEARLY'
+};
+
+const FROM_API_GOAL_TYPES = {
+  'DISTANCE': GoalTypes.DISTANCE,
+  'DURATION': GoalTypes.DURATION,
+  'NUMBER_OF_RUNS': GoalTypes.FREQUENCY
+};
+
+const FROM_API_GOAL_PERIODS = {
+  'WEEKLY': GoalPeriods.WEEKLY,
+  'MONTHLY': GoalPeriods.MONTHLY,
+  'YEARLY': GoalPeriods.YEARLY
+};
+
 export const GoalProvider = ({ children }) => {
   const [goals, setGoals] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { workouts } = useWorkout();
-  
-  // Load goals and achievements from localStorage or backup
-  useEffect(() => {
+
+  const fetchGoals = async () => {
     try {
-      // Try to load from localStorage first
-      const storedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
-      const storedAchievements = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
-      
-      // Try to load from sessionStorage backups if localStorage is empty
-      const backupGoals = sessionStorage.getItem(STORAGE_KEYS.GOALS_BACKUP);
-      const backupAchievements = sessionStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS_BACKUP);
-      
-      // Set goals from localStorage or backup
-      if (storedGoals) {
-        const parsedGoals = JSON.parse(storedGoals);
-        setGoals(parsedGoals);
-        // Create a backup in sessionStorage
-        sessionStorage.setItem(STORAGE_KEYS.GOALS_BACKUP, storedGoals);
-      } else if (backupGoals) {
-        // Restore from backup
-        const parsedGoals = JSON.parse(backupGoals);
-        setGoals(parsedGoals);
-        localStorage.setItem(STORAGE_KEYS.GOALS, backupGoals);
-        console.log('Goals restored from backup');
-      }
-      
-      // Set achievements from localStorage or backup
-      if (storedAchievements) {
-        const parsedAchievements = JSON.parse(storedAchievements);
-        setAchievements(parsedAchievements);
-        // Create a backup in sessionStorage
-        sessionStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS_BACKUP, storedAchievements);
-      } else if (backupAchievements) {
-        // Restore from backup
-        const parsedAchievements = JSON.parse(backupAchievements);
-        setAchievements(parsedAchievements);
-        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, backupAchievements);
-        console.log('Achievements restored from backup');
-      }
+      const response = await api.get('/goals/');
+      const fetchedGoals = response.data.goals.map(goal => ({
+        id: goal.uuid,
+        type: FROM_API_GOAL_TYPES[goal.goal_type],
+        target: goal.target,
+        period: FROM_API_GOAL_PERIODS[goal.time_period],
+        createdAt: goal.created_at,
+        isCompleted: false // Logic for completion will be handled by calculateGoalProgress
+      }));
+      setGoals(fetchedGoals);
     } catch (error) {
-      console.error('Error loading goals/achievements:', error);
+      console.error('Error fetching goals:', error);
     }
-  }, []);
-  
-  // Listen for localStorage changes and handle potential data loss
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      // If localStorage was cleared or goals were removed
-      if (e.key === null || (e.key === STORAGE_KEYS.GOALS && !e.newValue)) {
-        console.log('Goals may have been cleared, attempting to restore');
-        
-        // Try to restore from state if we have goals
-        if (goals.length > 0) {
-          try {
-            const goalsJson = JSON.stringify(goals);
-            localStorage.setItem(STORAGE_KEYS.GOALS, goalsJson);
-            console.log('Goals restored from state');
-          } catch (err) {
-            console.error('Failed to restore goals from state:', err);
-          }
-        } 
-        // If no goals in state, try to restore from backup
-        else {
-          const backupGoals = sessionStorage.getItem(STORAGE_KEYS.GOALS_BACKUP);
-          if (backupGoals) {
-            localStorage.setItem(STORAGE_KEYS.GOALS, backupGoals);
-            setGoals(JSON.parse(backupGoals));
-            console.log('Goals restored from backup');
-          }
-        }
-      }
-      
-      // Same for achievements
-      if (e.key === null || (e.key === STORAGE_KEYS.ACHIEVEMENTS && !e.newValue)) {
-        if (achievements.length > 0) {
-          try {
-            localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
-          } catch (err) {
-            console.error('Failed to restore achievements:', err);
-          }
-        } else {
-          const backupAchievements = sessionStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS_BACKUP);
-          if (backupAchievements) {
-            localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, backupAchievements);
-            setAchievements(JSON.parse(backupAchievements));
-          }
-        }
-      }
-    };
-    
-    // Add event listener for storage events
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [goals, achievements]);
-  
-  // Save goals and achievements to localStorage when they change
-  useEffect(() => {
-    try {
-      // Only proceed if we have goals to save
-      if (goals.length > 0) {
-        // Create JSON string once to avoid duplication
-        const goalsJson = JSON.stringify(goals);
-        
-        // Save to both localStorage and sessionStorage backup
-        localStorage.setItem(STORAGE_KEYS.GOALS, goalsJson);
-        sessionStorage.setItem(STORAGE_KEYS.GOALS_BACKUP, goalsJson);
-      }
-    } catch (error) {
-      console.error('Error saving goals:', error);
-    }
-  }, [goals]);
-  
-  // Separate effect for achievements to avoid unnecessary saves
-  useEffect(() => {
-    try {
-      if (achievements.length > 0) {
-        const achievementsJson = JSON.stringify(achievements);
-        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, achievementsJson);
-        sessionStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS_BACKUP, achievementsJson);
-      }
-    } catch (error) {
-      console.error('Error saving achievements:', error);
-    }
-  }, [achievements]);
-  
-  // Create a new goal
-  const addGoal = (type, target, period) => {
-    const newGoal = {
-      id: uuidv4(),
-      type,
-      target,
-      period,
-      createdAt: new Date().toISOString(),
-      isCompleted: false
-    };
-    
-    setGoals(prev => [newGoal, ...prev]);
-    return newGoal;
   };
-  
-  // Update an existing goal
+
+  const fetchAchievements = async () => {
+    try {
+      const response = await api.get('/achievements/');
+      // Map backend achievements to frontend structure if necessary
+      // Backend: uuid, title, description, earned_at, achievement_type, meta_data
+      // Frontend expects: id, type, value, period, achievedAt (based on previous code)
+      // We'll adapt the frontend component to use the new structure, but for now let's store them as is
+      // or map them if we can extract the info.
+
+      // Let's assume meta_data contains the goal info if it's a goal achievement
+      const fetchedAchievements = response.data.achievements.map(ach => ({
+        id: ach.uuid,
+        title: ach.title,
+        description: ach.description,
+        achievedAt: ach.earned_at,
+        type: ach.meta_data?.goal_type ? FROM_API_GOAL_TYPES[ach.meta_data.goal_type] : 'unknown',
+        value: ach.meta_data?.target || 0,
+        period: ach.meta_data?.time_period ? FROM_API_GOAL_PERIODS[ach.meta_data.time_period] : 'unknown',
+        // Keep original for flexibility
+        original: ach
+      }));
+      setAchievements(fetchedAchievements);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([fetchGoals(), fetchAchievements()]);
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  // Create a new goal
+  const addGoal = async (type, target, period) => {
+    try {
+      const payload = {
+        goal_type: API_GOAL_TYPES[type],
+        target: parseInt(target),
+        time_period: API_GOAL_PERIODS[period]
+      };
+
+      const response = await api.post('/goals/', payload);
+      const newGoalData = response.data;
+
+      const newGoal = {
+        id: newGoalData.uuid,
+        type: FROM_API_GOAL_TYPES[newGoalData.goal_type],
+        target: newGoalData.target,
+        period: FROM_API_GOAL_PERIODS[newGoalData.time_period],
+        createdAt: newGoalData.created_at,
+        isCompleted: false
+      };
+
+      setGoals(prev => [newGoal, ...prev]);
+      return newGoal;
+    } catch (error) {
+      console.error('Error adding goal:', error);
+      throw error;
+    }
+  };
+
+  // Update an existing goal - API doesn't seem to have update endpoint for goals based on router check
+  // So we'll keep this local only or remove it if not used. 
+  // The previous code had updateGoal but it was mostly used for marking completion locally.
   const updateGoal = (id, updates) => {
-    setGoals(prev => 
+    setGoals(prev =>
       prev.map(goal => goal.id === id ? { ...goal, ...updates } : goal)
     );
   };
-  
+
   // Delete a goal
-  const deleteGoal = (id) => {
-    setGoals(prev => prev.filter(goal => goal.id !== id));
+  const deleteGoal = async (id) => {
+    try {
+      await api.delete(`/goals/${id}`);
+      setGoals(prev => prev.filter(goal => goal.id !== id));
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+    }
   };
-  
+
   // Calculate progress for each goal
   const calculateGoalProgress = (goal) => {
     // Filter workouts that are within the goal period
     const now = new Date();
     let periodStart = new Date();
-    
+
     switch (goal.period) {
       case GoalPeriods.WEEKLY:
         // Start of current week (Sunday)
@@ -207,7 +171,7 @@ export const GoalProvider = ({ children }) => {
       default:
         periodStart = new Date(0); // Start of epoch time
     }
-    
+
     const periodWorkouts = workouts.filter(workout => {
       try {
         const workoutDate = new Date(workout.startTime);
@@ -217,9 +181,9 @@ export const GoalProvider = ({ children }) => {
         return false;
       }
     });
-    
+
     let progress = 0;
-    
+
     switch (goal.type) {
       case GoalTypes.DISTANCE:
         // Sum up the total distance
@@ -236,49 +200,42 @@ export const GoalProvider = ({ children }) => {
       default:
         progress = 0;
     }
-    
+
     // Calculate percentage of completion
     const percentage = Math.min(100, Math.round((progress / goal.target) * 100));
-    
-    // Check if goal is completed and not already marked as completed
+
+    // Check if goal is completed
+    // Note: We are not creating achievements here anymore as the backend should handle that
+    // when runs are synced/created. However, for visual feedback, we can still mark it.
     if (percentage >= 100 && !goal.isCompleted) {
-      // Mark goal as completed
-      updateGoal(goal.id, { isCompleted: true });
-      
-      // Add achievement
-      const achievement = {
-        id: uuidv4(),
-        goalId: goal.id,
-        type: goal.type,
-        value: goal.target,
-        period: goal.period,
-        achievedAt: new Date().toISOString()
-      };
-      
-      setAchievements(prev => [achievement, ...prev]);
+      // We can update local state to show completion effect
+      // But we don't persist this "isCompleted" state to backend as backend computes it dynamically or via achievements
+      // For now, let's just return the progress. The UI uses isCompleted for styling.
+      // We can infer isCompleted from percentage.
     }
-    
+
     return {
       value: progress,
       percentage,
-      target: goal.target
+      target: goal.target,
+      isCompleted: percentage >= 100
     };
   };
-  
+
   // Get statistics
   const getStatistics = () => {
     if (!workouts.length) return null;
-    
+
     // Filter out active workouts
     const completedWorkouts = workouts.filter(w => !w.isActive);
-    
+
     if (!completedWorkouts.length) return null;
-    
+
     // Total stats
     const totalDistance = completedWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0);
     const totalDuration = completedWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
     const totalWorkouts = completedWorkouts.length;
-    
+
     // Find personal records
     const fastestPace = completedWorkouts.reduce((fastest, w) => {
       if (w.distance && w.duration && w.distance > 0 && w.duration > 0) {
@@ -287,15 +244,15 @@ export const GoalProvider = ({ children }) => {
       }
       return fastest;
     }, null);
-    
+
     const longestDistance = completedWorkouts.reduce((longest, w) => {
       return (!longest || (w.distance > longest)) ? w.distance : longest;
     }, 0);
-    
+
     // Streak calculation
     let currentStreak = 0;
     let maxStreak = 0;
-    
+
     // Sort workouts by date
     const sortedWorkouts = [...completedWorkouts].sort((a, b) => {
       try {
@@ -305,28 +262,28 @@ export const GoalProvider = ({ children }) => {
         return 0;
       }
     });
-    
+
     if (sortedWorkouts.length > 0) {
       // Check if there's a workout today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       try {
         const latestWorkout = new Date(sortedWorkouts[0].startTime);
         latestWorkout.setHours(0, 0, 0, 0);
-        
+
         // If the latest workout is from today, start the streak count
         if (latestWorkout.getTime() === today.getTime()) {
           currentStreak = 1;
-          
+
           // Check consecutive days before today
           let prevDate = new Date(today);
           prevDate.setDate(prevDate.getDate() - 1);
-          
+
           for (let i = 1; i < sortedWorkouts.length; i++) {
             const workoutDate = new Date(sortedWorkouts[i].startTime);
             workoutDate.setHours(0, 0, 0, 0);
-            
+
             if (workoutDate.getTime() === prevDate.getTime()) {
               currentStreak++;
               prevDate.setDate(prevDate.getDate() - 1);
@@ -338,11 +295,11 @@ export const GoalProvider = ({ children }) => {
       } catch (e) {
         console.error('Error calculating streak:', e);
       }
-      
+
       // Calculate max streak (historical)
       maxStreak = currentStreak;
     }
-    
+
     return {
       totalDistance,
       totalDuration,
@@ -353,12 +310,13 @@ export const GoalProvider = ({ children }) => {
       maxStreak
     };
   };
-  
+
   return (
     <GoalsContext.Provider
       value={{
         goals,
         achievements,
+        loading,
         addGoal,
         updateGoal,
         deleteGoal,
@@ -373,10 +331,10 @@ export const GoalProvider = ({ children }) => {
 
 export const useGoals = () => {
   const context = useContext(GoalsContext);
-  
+
   if (!context) {
     throw new Error('useGoals must be used within a GoalProvider');
   }
-  
+
   return context;
 };
