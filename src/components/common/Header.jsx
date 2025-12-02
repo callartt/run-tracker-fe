@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
+import {
   FaRunning, 
   FaHistory, 
   FaCog, 
@@ -28,11 +28,6 @@ const Header = () => {
     { path: '/stats', icon: FaChartLine, label: 'Stats' },
     { path: '/settings', icon: FaCog, label: 'Settings' }
   ];
-  
-  useEffect(() => {
-    // Close mobile menu on route change
-    console.log ('Roma ne lubit gadosti')
-  }, [user.theme])
 
   return (
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 hidden md:block">      <div className="container-mobile mx-auto">

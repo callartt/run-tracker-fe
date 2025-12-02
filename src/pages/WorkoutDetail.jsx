@@ -26,7 +26,7 @@ import SocialShare from '../components/sharing/SocialShare'
 const WorkoutDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { workouts, deleteWorkout, shareWorkout, renameWorkout } = useWorkout()
+  const { workouts, deleteWorkout, renameWorkout } = useWorkout()
   const { user } = useUser()
   const [workout, setWorkout] = useState(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
@@ -47,7 +47,6 @@ const WorkoutDetail = () => {
     }
   }, [id, workouts, navigate]);
   
-  // Calculate additional stats
   const calculateStats = () => {
     if (!workout) return {}
     
@@ -59,7 +58,7 @@ const WorkoutDetail = () => {
     
     const calories = calculateCalories(
       user.weight, 
-      workout.duration / 60, // convert to minutes
+      workout.duration / 60,
       workout.avgHeartRate,
       user.gender,
       user.age
@@ -72,49 +71,38 @@ const WorkoutDetail = () => {
     }
   }
   
-  // Format route data for the map
   const getRouteData = () => {
-    if (!workout) return [];
-    if (!workout.route) return [];
-    
-    // Check if route is an array before mapping
-    if (!Array.isArray(workout.route)) {
-      console.error("Route is not an array:", workout.route);
+    if (!workout || !workout.route || !Array.isArray(workout.route)) {
       return [];
     }
     
     return workout.route.map(point => {
-      // Make sure point has lat and lng properties
-      if (!point || typeof point !== 'object' || !('lat' in point) || !('lng' in point)) {
-        console.error("Invalid point in route:", point);
-        return {
-          latitude: 0,
-          longitude: 0
-        };
+      
+      const lat = point.latitude || point.lat;
+      const lng = point.longitude || point.lng;
+      
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+         return null; 
       }
       
       return {
-        latitude: point.lat,
-        longitude: point.lng,
+        latitude: lat,
+        longitude: lng,
         ...point
       };
-    });
+    }).filter(point => point !== null);
   };
-  
-  // Share workout (open social share modal)
+
   const handleShare = () => {
-    // Just open the share modal - the actual sharing happens in the SocialShare component
     setShareModalOpen(true);
   }
   
-  // Delete workout
   const handleDelete = () => {
     deleteWorkout(id)
     setDeleteModalOpen(false)
     navigate('/history')
   }
 
-  // Rename workout
   const handleRename = () => {
     if (workoutName.trim()) {
       renameWorkout(id, workoutName.trim());
@@ -122,7 +110,6 @@ const WorkoutDetail = () => {
     }
   }
   
-  // Go back to history
   const goBack = () => {
     navigate('/history')
   }
@@ -135,12 +122,11 @@ const WorkoutDetail = () => {
     )
   }
   
-  const { averageSpeed, pace, calories } = calculateStats()
+  const { pace, calories } = calculateStats()
   const route = getRouteData()
   
   return (
     <div className="pb-16">
-      {/* Header */}
       <div className="flex items-center mb-4">
         <button
           onClick={goBack}
@@ -152,7 +138,6 @@ const WorkoutDetail = () => {
         <h1 className="text-xl font-bold">Workout Details</h1>
       </div>
       
-      {/* Workout Name/Title with Edit Option */}
       <div className="mb-4">
         {editNameMode ? (
           <div className="flex items-center">
@@ -187,7 +172,6 @@ const WorkoutDetail = () => {
         )}
       </div>
       
-      {/* Date and Time */}
       <div className="flex items-center mb-4 text-gray-600 dark:text-gray-300">
         <FaCalendarAlt className="mr-2" />
         <span>
@@ -206,7 +190,6 @@ const WorkoutDetail = () => {
       </div>
      
      
-      {/* Map */}
       {route.length > 0 && (
         <RunMap 
           route={route} 
@@ -216,9 +199,7 @@ const WorkoutDetail = () => {
       )}
       
       
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        {/* Distance */}
         <div className="card p-4">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Distance</h3>
@@ -229,7 +210,6 @@ const WorkoutDetail = () => {
           </div>
         </div>
         
-        {/* Duration */}
         <div className="card p-4">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Duration</h3>
@@ -239,8 +219,7 @@ const WorkoutDetail = () => {
             {formatDuration(workout.duration)}
           </div>
         </div>
-        
-        {/* Pace */}
+
         <div className="card p-4">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Pace</h3>
@@ -254,7 +233,6 @@ const WorkoutDetail = () => {
           </div>
         </div>
         
-        {/* Calories */}
         <div className="card p-4">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Calories</h3>
@@ -269,7 +247,6 @@ const WorkoutDetail = () => {
         </div>
       </div>
       
-      {/* Heart Rate Data */}
       {workout.avgHeartRate > 0 && (
         <div className="card p-4 mt-4">
           <h3 className="text-lg font-medium mb-3">Heart Rate</h3>
@@ -293,12 +270,10 @@ const WorkoutDetail = () => {
               </div>
             </div>
             
-            {/* Simple heart rate visualization could go here */}
           </div>
         </div>
       )}
       
-      {/* Actions */}
       <div className="flex mt-6 space-x-2">
         <button
           onClick={handleShare}
@@ -316,7 +291,6 @@ const WorkoutDetail = () => {
         </button>
       </div>
       
-      {/* Social Share Modal */}
       {shareModalOpen && (
         <SocialShare 
           workout={workout}
@@ -324,7 +298,6 @@ const WorkoutDetail = () => {
         />
       )}
       
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 w-full max-w-xs mx-4 shadow-lg">

@@ -5,24 +5,22 @@ import { UserProvider } from './context/UserContext'
 import { GoalProvider } from './context/GoalsContext';
 import SimulationButton from './components/debug/SimulationButton';
 
-// Pages
 import Home from './pages/Home'
 import ActiveRun from './pages/ActiveRun'
 import History from './pages/History'
 import WorkoutDetailPage from './pages/WorkoutDetail.jsx'
 import Settings from './pages/Settings'
 import Challenge from './pages/Challenge'
-// Import the missing components (you'll need to ensure these exist)
 import Goals from './pages/Goals'
 import Statistics from './pages/Statistics'
 
-// Components
 import Header from './components/common/Header'
 import Footer from './components/common/Footer'
 
 function App() {
   const [onlineStatus, setOnlineStatus] = useState(navigator.onLine)
-  const [showDebug, setShowDebug] = useState(process.env.NODE_ENV === 'development')
+  
+  const [showDebug, setShowDebug] = useState(import.meta.env.DEV)
 
   useEffect(() => {
     const handleOnline = () => setOnlineStatus(true)
@@ -37,7 +35,6 @@ function App() {
     }
   }, [])
 
-  // Enable debug mode with a keyboard shortcut (Ctrl+Shift+D)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
@@ -73,10 +70,8 @@ function App() {
             
             <Footer />
             
-            {/* Add the simulation button */}
             {showDebug && <SimulationButton />}
             
-            {/* Optional: Display an offline notification */}
             {!onlineStatus && (
               <div className="fixed bottom-20 left-0 right-0 bg-red-500 text-white text-center py-1 text-sm">
                 You are offline. Some features may be limited.
