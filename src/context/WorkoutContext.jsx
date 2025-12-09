@@ -4,7 +4,7 @@ import useGeolocation from '../hooks/useGeolocation'
 import GeoSimulator from '../utils/GeoSimulator'
 import { calculatePace, calculateCalories } from '../utils/calculations'
 
-export const WorkoutContext = createContext(null)
+export const WorkoutContext = createContext(null) // 0
 
 export const WorkoutProvider = ({ children }) => {
   const [workouts, setWorkouts] = useState([])
