@@ -28,7 +28,7 @@ import api from '../api/axios';
 const Statistics = () => {
   const { user } = useUser();
   const [stats, setStats] = useState(null);
-  const [periodFilter, setPeriodFilter] = useState('last_7_days');
+  const [periodFilter, setPeriodFilter] = useState('LAST_7_DAYS');
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -100,7 +100,7 @@ const Statistics = () => {
             <h3 className="text-sm font-medium">Total Distance</h3>
           </div>
           <p className="text-2xl font-bold">
-            {formatDistance(stats.totals.total_distance, user.units)}
+            {formatDistance(stats.totals.total_distance)}
           </p>
         </div>
 
@@ -152,12 +152,10 @@ const Statistics = () => {
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Fastest Pace</span>
             <span className="font-medium">
-              {stats.personal_records.fastest_pace
-                ? calculatePace(1000 / stats.personal_records.fastest_pace, user.units) // Convert seconds/km to m/s
-                : '--:--'}
+              {stats.personal_records.fastest_pace.toFixed(2) || '--:--'}
               {' '}
               <span className="text-sm text-gray-500">
-                {user.units === 'metric' ? 'min/km' : 'min/mi'}
+                min/km
               </span>
             </span>
           </div>
@@ -165,7 +163,7 @@ const Statistics = () => {
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Longest Distance</span>
             <span className="font-medium">
-              {formatDistance(stats.personal_records.longest_distance, user.units)}
+              {formatDistance(stats.personal_records.longest_distance)}
             </span>
           </div>
 
@@ -188,9 +186,9 @@ const Statistics = () => {
             onChange={(e) => setPeriodFilter(e.target.value)}
             className="text-sm p-1 bg-gray-100 dark:bg-gray-800 rounded"
           >
-            <option value="last_7_days">Last 7 Days</option>
-            <option value="last_30_days">Last 30 Days</option>
-            <option value="last_year">Last Year</option>
+            <option value="LAST_7_DAYS">Last 7 Days</option>
+            <option value="LAST_30_DAYS">Last 30 Days</option>
+            <option value="LAST_YEAR">Last Year</option>
           </select>
         </div>
 
@@ -211,16 +209,12 @@ const Statistics = () => {
                   <YAxis
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => {
-                      if (user.units === 'metric') {
-                        return `${(value / 1000).toFixed(1)} km`;
-                      } else {
-                        return `${(value / 1609.34).toFixed(1)} mi`;
-                      }
+                      return `${(value).toFixed(1)} km`;
                     }}
                   />
                   <Tooltip
                     formatter={(value) => [
-                      formatDistance(value, user.units),
+                      formatDistance(value),
                       'Distance'
                     ]}
                   />

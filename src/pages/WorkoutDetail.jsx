@@ -51,18 +51,20 @@ const WorkoutDetail = () => {
     if (!workout) return {}
     
     const averageSpeed = workout.distance > 0 && workout.duration > 0
-      ? workout.distance / workout.duration
+      ? workout.distance * 1000 / workout.duration
       : 0
       
-    const pace = calculatePace(averageSpeed, user.units)
+    const pace = calculatePace(averageSpeed)
     
-    const calories = calculateCalories(
-      user.weight, 
-      workout.duration / 60,
-      workout.avgHeartRate,
-      user.gender,
-      user.age
-    )
+    // const calories = calculateCalories(
+    //   user.weight, 
+    //   workout.duration / 60,
+    //   workout.avgHeartRate,
+    //   user.gender,
+    //   user.age
+    // )
+
+    const calories = workout.calories
     
     return {
       averageSpeed,
@@ -206,7 +208,7 @@ const WorkoutDetail = () => {
             <FaMapMarkerAlt className="text-primary text-sm" />
           </div>
           <div className="text-2xl font-bold">
-            {formatDistance(workout.distance, user.units)}
+            {formatDistance(workout.distance)}
           </div>
         </div>
         
@@ -228,7 +230,7 @@ const WorkoutDetail = () => {
           <div className="text-2xl font-bold">
             {pace}
             <span className="text-sm text-gray-500 ml-1">
-              {user.units === 'metric' ? 'min/km' : 'min/mi'}
+              min/km
             </span>
           </div>
         </div>

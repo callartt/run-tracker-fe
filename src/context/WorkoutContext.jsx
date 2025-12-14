@@ -15,7 +15,6 @@ export const WorkoutProvider = ({ children }) => {
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [duration, setDuration] = useState(0)
-  const [currentHeartRate, setCurrentHeartRate] = useState(0)
   const [heartRateData, setHeartRateData] = useState([])
 
   const {
@@ -47,7 +46,7 @@ export const WorkoutProvider = ({ children }) => {
         startTime: run.start_time,
         endTime: run.end_time,
         duration: run.duration * 60, // Convert minutes to seconds for frontend
-        distance: run.distance * 1000, // Convert km to meters for frontend
+        distance: run.distance, // Convert km to meters for frontend
         calories: run.calories,
         route: run.route || [],
         // Fields not supported by backend yet, set defaults
@@ -121,7 +120,6 @@ export const WorkoutProvider = ({ children }) => {
         setDuration(prev => prev + 1)
 
         const simulatedBpm = Math.floor(Math.random() * (150 - 130 + 1) + 130)
-        setCurrentHeartRate(simulatedBpm)
         setHeartRateData(prev => [...prev, { bpm: simulatedBpm, timestamp: new Date().toISOString() }])
 
       }, 1000)
@@ -143,7 +141,6 @@ export const WorkoutProvider = ({ children }) => {
 
     setDuration(0)
     setHeartRateData([])
-    setCurrentHeartRate(0)
     setIsRunning(true)
     setIsPaused(false)
     setActiveWorkout(initialWorkoutData)
@@ -158,11 +155,6 @@ export const WorkoutProvider = ({ children }) => {
 
   const resumeWorkout = () => {
     setIsPaused(false)
-  }
-
-  const addHeartRateData = (bpm) => {
-    setCurrentHeartRate(bpm)
-    setHeartRateData(prev => [...prev, { bpm, timestamp: new Date().toISOString() }])
   }
 
   const finishWorkout = async () => {
@@ -190,7 +182,7 @@ export const WorkoutProvider = ({ children }) => {
       ...activeWorkout,
       endTime,
       duration,
-      distance,
+      distance: distance / 1000,
       route,
       avgHeartRate,
       maxHeartRate,
@@ -233,12 +225,24 @@ export const WorkoutProvider = ({ children }) => {
     }
   }
 
-  const renameWorkout = (id, newName) => {
+  const renameWorkout = async (id, newName) => {
+    // Optimistic update
+    const previousWorkouts = [...workouts]
+
     setWorkouts(prev =>
       prev.map(workout =>
         workout.id === id ? { ...workout, name: newName } : workout
       )
     )
+
+    try {
+      await api.patch(`/runs/${id}`, { name: newName })
+    } catch (error) {
+      console.error('Error renaming workout:', error)
+      // Revert on error
+      setWorkouts(previousWorkouts)
+      // Optional: Show error notification
+    }
   }
 
   const deleteWorkout = id => {
@@ -254,10 +258,10 @@ export const WorkoutProvider = ({ children }) => {
   }
 
   const currentPace = position?.speed
-    ? calculatePace(position.speed, 'metric')
-    : calculatePace(distance / duration || 0, 'metric')
+    ? calculatePace(position.speed)
+    : calculatePace(distance / duration || 0)
 
-  const currentCalories = calculateCalories(75, duration / 60, currentHeartRate || 140, 'male', 25)
+  const currentCalories = calculateCalories(75, duration / 60, 140, 'male', 25)
 
   return (
     <WorkoutContext.Provider
@@ -273,7 +277,6 @@ export const WorkoutProvider = ({ children }) => {
         route,
         distance,
         currentPace,
-        currentHeartRate,
         calories: currentCalories,
         error: geoError,
         startWorkout,
@@ -283,7 +286,6 @@ export const WorkoutProvider = ({ children }) => {
         deleteWorkout,
         shareWorkout,
         renameWorkout,
-        addHeartRateData,
         getCurrentPosition
       }}
     >

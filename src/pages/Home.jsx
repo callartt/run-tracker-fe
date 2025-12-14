@@ -112,10 +112,10 @@ const Home = () => {
           
           <div className="card p-3 text-center">
             <div className="text-xl font-bold">
-              {formatDistance(totalStats.totalDistance, user.units).split(' ')[0]}
+              {formatDistance(totalStats.totalDistance).split(' ')[0]}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {user.units === 'metric' ? 'km' : 'mi'}
+              km
             </div>
           </div>
           
@@ -236,7 +236,7 @@ const Home = () => {
             <div className="text-sm text-gray-600 dark:text-gray-300 flex flex-wrap">
               <span className="flex items-center mr-3">
                 <FaMapMarkerAlt className="mr-1 text-xs" />
-                {formatDistance(workout.distance, user.units)}
+                {formatDistance(workout.distance)}
               </span>
               
               <span className="flex items-center mr-3">

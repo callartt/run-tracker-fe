@@ -16,9 +16,7 @@ const DEFAULT_USER_STATE = {
     threshold: { min: 162, max: 180 },
     anaerobic: { min: 181, max: 200 }  
   },
-  units: 'metric',
   theme: 'light',
-  notificationsEnabled: true
 }
 
 const loadInitialState = () => {
@@ -82,13 +80,6 @@ export const UserProvider = ({ children }) => {
     }))
   }
 
-  const toggleUnits = () => {
-    setUser(prev => ({
-      ...prev,
-      units: prev.units === 'metric' ? 'imperial' : 'metric'
-    }))
-  }
-
   const getHeartRateZone = (heartRate) => {
     if (!heartRate) return null
     
@@ -108,7 +99,6 @@ export const UserProvider = ({ children }) => {
         updateUserProfile,
         updateHeartRateZones,
         toggleTheme,
-        toggleUnits,
         getHeartRateZone
       }}
     >

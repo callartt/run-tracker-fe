@@ -36,13 +36,6 @@ const Goals = () => {
     // Convert target to appropriate units
     let target = Number(newGoal.target);
     
-    // For distance, convert km/mi to meters
-    if (newGoal.type === GoalTypes.DISTANCE) {
-      target = user.units === 'metric' 
-        ? target * 1000  // km to meters
-        : target * 1609.34;  // miles to meters
-    }
-    
     // For duration, convert minutes to seconds
     if (newGoal.type === GoalTypes.DURATION) {
       target = target * 60;  // minutes to seconds
@@ -64,7 +57,7 @@ const Goals = () => {
   const formatGoalTarget = (goal) => {
     switch (goal.type) {
       case GoalTypes.DISTANCE:
-        return formatDistance(goal.target, user.units);
+        return formatDistance(goal.target);
       case GoalTypes.DURATION:
         return formatDuration(goal.target);
       case GoalTypes.FREQUENCY:
@@ -77,7 +70,7 @@ const Goals = () => {
   const formatGoalProgress = (goal, progress) => {
     switch (goal.type) {
       case GoalTypes.DISTANCE:
-        return formatDistance(progress.value, user.units);
+        return formatDistance(progress.value);
       case GoalTypes.DURATION:
         return formatDuration(progress.value);
       case GoalTypes.FREQUENCY:
@@ -155,7 +148,7 @@ const Goals = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">
                 {newGoal.type === GoalTypes.DISTANCE 
-                  ? `Target (${user.units === 'metric' ? 'km' : 'mi'})`
+                  ? `Target (km)`
                   : newGoal.type === GoalTypes.DURATION
                     ? 'Target (minutes)'
                     : 'Target (runs)'

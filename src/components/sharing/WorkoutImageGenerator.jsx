@@ -181,7 +181,7 @@ const WorkoutImageGenerator = ({ workout, user, onImageGenerated }) => {
       
       ctx.fillStyle = user?.theme === 'dark' ? '#FFFFFF' : '#111827';
       ctx.font = 'bold 36px Arial';
-      ctx.fillText(formatDistance(workout.distance, user?.units || 'metric'), statsX + 60, statsY);
+      ctx.fillText(formatDistance(workout.distance), statsX + 60, statsY);
       
       ctx.fillStyle = user?.theme === 'dark' ? '#9CA3AF' : '#6B7280';
       ctx.font = '24px Arial';
@@ -209,7 +209,7 @@ const WorkoutImageGenerator = ({ workout, user, onImageGenerated }) => {
         ? workout.distance / workout.duration
         : 0;
       
-      const pace = calculatePace(averageSpeed, user?.units || 'metric');
+      const pace = calculatePace(averageSpeed);
       
       ctx.fillStyle = user?.theme === 'dark' ? '#FFFFFF' : '#111827';
       ctx.font = 'bold 36px Arial';

@@ -142,7 +142,7 @@ const Challenge = () => {
               <div className="flex items-center justify-center mt-1">
                 <FaMapMarkerAlt className="text-primary mr-1" />
                 <span className="text-xl font-bold">
-                  {formatDistance(challengeWorkout.distance, user.units)}
+                  {formatDistance(challengeWorkout.distance)}
                 </span>
               </div>
             </div>
@@ -165,11 +165,11 @@ const Challenge = () => {
                 <FaRunning className="text-primary mr-1" />
                 <span className="text-xl font-bold">
                   {challengeWorkout.distance > 0 && challengeWorkout.duration > 0 
-                    ? calculatePace(challengeWorkout.distance / challengeWorkout.duration, user.units) 
+                    ? calculatePace(challengeWorkout.distance / challengeWorkout.duration) 
                     : '--:--'}
                 </span>
                 <span className="text-sm text-gray-500 ml-1">
-                  {user.units === 'metric' ? 'min/km' : 'min/mi'}
+                  min/km
                 </span>
               </div>
             </div>

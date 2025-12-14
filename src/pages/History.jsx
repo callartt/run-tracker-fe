@@ -69,7 +69,7 @@ const History = () => {
       }
     }
 
-    // Map distance (convert km to backend units if needed, but backend expects float km, frontend input is km)
+    // Map distance (backend expects float km, frontend input is km)
     if (filters.minDistance) {
       backendFilters.min_distance = parseFloat(filters.minDistance);
     }
@@ -396,20 +396,13 @@ const History = () => {
                       <div className="text-sm text-gray-600 dark:text-gray-300 flex flex-wrap">
                         <span className="flex items-center mr-3">
                           <FaMapMarkerAlt className="mr-1 text-xs" />
-                          {formatDistance(workout.distance, user.units)}
+                          {formatDistance(workout.distance)}
                         </span>
 
                         <span className="flex items-center mr-3">
                           <FaRunning className="mr-1 text-xs" />
                           {formatDuration(workout.duration)}
                         </span>
-
-                        {workout.avgHeartRate > 0 && (
-                          <span className="flex items-center">
-                            <FaHeartbeat className="mr-1 text-xs text-red-500" />
-                            {workout.avgHeartRate} bpm
-                          </span>
-                        )}
                       </div>
 
                       {/* View details button */}

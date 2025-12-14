@@ -85,7 +85,7 @@ const ActiveRun = () => {
         <div>
           <div className="text-sm text-gray-500 dark:text-gray-400">Distance</div>
           <div className="text-2xl font-bold">
-            {formatDistance(distance, user.units)}
+            {formatDistance(distance / 1000)}
           </div>
         </div>
         <div>

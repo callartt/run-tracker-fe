@@ -13,7 +13,7 @@ import { useUser } from '../context/UserContext'
 import { useAuth } from '../context/AuthContext'
 
 const Settings = () => {
-  const { user: localUser, updateHeartRateZones, toggleTheme, toggleUnits, updateUserProfile: updateLocalUserProfile } = useUser()
+  const { user: localUser, updateHeartRateZones, toggleTheme, updateUserProfile: updateLocalUserProfile } = useUser()
   const { user: authUser, updateUser } = useAuth()
 
   const [formData, setFormData] = useState({
@@ -39,10 +39,9 @@ const Settings = () => {
         gender: authUser.gender || 'not specified',
         // These might not be in backend yet, so fallback to local or default
         maxHeartRate: localUser.maxHeartRate || 190,
-        notificationsEnabled: localUser.notificationsEnabled || true
       }))
     }
-  }, [authUser, localUser.maxHeartRate, localUser.notificationsEnabled])
+  }, [authUser, localUser.maxHeartRate])
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -77,7 +76,6 @@ const Settings = () => {
       updateLocalUserProfile({
         ...updatedProfile,
         maxHeartRate: Number(formData.maxHeartRate),
-        notificationsEnabled: formData.notificationsEnabled
       })
 
       // Update heart rate zones based on max heart rate (local calculation)
@@ -195,7 +193,7 @@ const Settings = () => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label htmlFor="height" className="block text-sm font-medium mb-1">
-                  Height ({localUser.units === 'metric' ? 'cm' : 'in'})
+                  Height (cm)
                 </label>
                 <input
                   type="number"
@@ -212,7 +210,7 @@ const Settings = () => {
               {/* Weight */}
               <div>
                 <label htmlFor="weight" className="block text-sm font-medium mb-1">
-                  Weight ({localUser.units === 'metric' ? 'kg' : 'lb'})
+                  Weight (kg)
                 </label>
                 <input
                   type="number"
