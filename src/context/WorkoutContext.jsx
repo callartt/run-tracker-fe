@@ -245,8 +245,18 @@ export const WorkoutProvider = ({ children }) => {
     }
   }
 
-  const deleteWorkout = id => {
+  const deleteWorkout = async id => {
+    // Optimistic update
+    const previousWorkouts = [...workouts]
     setWorkouts(prev => prev.filter(workout => workout.id !== id))
+
+    try {
+      await api.delete(`/runs/${id}`)
+    } catch (error) {
+      console.error('Error deleting workout:', error)
+      // Revert on error
+      setWorkouts(previousWorkouts)
+    }
   }
 
   const shareWorkout = id => {
