@@ -18,6 +18,7 @@ import SignUp from './pages/SignUp';
 // Import the missing components (you'll need to ensure these exist)
 import Goals from './pages/Goals'
 import Statistics from './pages/Statistics'
+import Leaderboard from './pages/Leaderboard'
 
 import Header from './components/common/Header'
 import Footer from './components/common/Footer'
@@ -74,6 +75,7 @@ function App() {
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/goals" element={<Goals />} />
                     <Route path="/stats" element={<Statistics />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
                     <Route path="/challenge/:id" element={<Challenge />} />
                   </Route>
                 </Routes>
