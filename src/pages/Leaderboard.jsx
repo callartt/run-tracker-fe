@@ -7,6 +7,7 @@ const Leaderboard = () => {
     const [leaderboardData, setLeaderboardData] = useState({ entries: [], current_user_entry: null });
     const [metric, setMetric] = useState('distance');
     const [period, setPeriod] = useState('week');
+    const [friendsOnly, setFriendsOnly] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -14,7 +15,7 @@ const Leaderboard = () => {
         const fetchLeaderboard = async () => {
             setLoading(true);
             try {
-                const data = await getLeaderboard(metric, period);
+                const data = await getLeaderboard(metric, period, friendsOnly);
                 setLeaderboardData(data);
                 setError(null);
             } catch (err) {
@@ -26,7 +27,7 @@ const Leaderboard = () => {
         };
 
         fetchLeaderboard();
-    }, [metric, period]);
+    }, [metric, period, friendsOnly]);
 
     const formatValue = (value, metricType) => {
         if (metricType === 'distance') return formatDistance(value);
@@ -50,7 +51,7 @@ const Leaderboard = () => {
 
             {/* Filters */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Metric
@@ -61,8 +62,8 @@ const Leaderboard = () => {
                                     key={m}
                                     onClick={() => setMetric(m)}
                                     className={`flex-1 py-2 text-sm font-medium rounded-md capitalize transition-colors ${metric === m
-                                            ? 'bg-white dark:bg-gray-600 text-primary shadow-sm'
-                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                        ? 'bg-white dark:bg-gray-600 text-primary shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                         }`}
                                 >
                                     {m}
@@ -85,8 +86,8 @@ const Leaderboard = () => {
                                     key={p.id}
                                     onClick={() => setPeriod(p.id)}
                                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${period === p.id
-                                            ? 'bg-white dark:bg-gray-600 text-primary shadow-sm'
-                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                        ? 'bg-white dark:bg-gray-600 text-primary shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                         }`}
                                 >
                                     {p.label}
@@ -94,6 +95,23 @@ const Leaderboard = () => {
                             ))}
                         </div>
                     </div>
+                </div>
+
+                {/* Friends Toggle */}
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Show Friends Only
+                    </span>
+                    <button
+                        onClick={() => setFriendsOnly(!friendsOnly)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${friendsOnly ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
+                            }`}
+                    >
+                        <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${friendsOnly ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                        />
+                    </button>
                 </div>
             </div>
 

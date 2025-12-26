@@ -5,7 +5,6 @@ import {
   FaCog,
   FaTrophy,
   FaChartLine,
-  FaMedal
 } from 'react-icons/fa'
 import Icon from '../common/Icon' // Import our Icon wrapper
 
@@ -18,7 +17,6 @@ const Footer = () => {
     { path: '/', icon: FaRunning, label: 'Run' },
     { path: '/history', icon: FaHistory, label: 'History' },
     { path: '/goals', icon: FaTrophy, label: 'Goals' },
-    { path: '/leaderboard', icon: FaMedal, label: 'Leaderboard' },
     { path: '/stats', icon: FaChartLine, label: 'Stats' },
     { path: '/settings', icon: FaCog, label: 'Settings' }
   ];

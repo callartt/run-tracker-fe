@@ -19,6 +19,7 @@ import SignUp from './pages/SignUp';
 import Goals from './pages/Goals'
 import Statistics from './pages/Statistics'
 import Leaderboard from './pages/Leaderboard'
+import Friends from './pages/Friends'
 
 import Header from './components/common/Header'
 import Footer from './components/common/Footer'
@@ -76,6 +77,7 @@ function App() {
                     <Route path="/goals" element={<Goals />} />
                     <Route path="/stats" element={<Statistics />} />
                     <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/friends" element={<Friends />} />
                     <Route path="/challenge/:id" element={<Challenge />} />
                   </Route>
                 </Routes>

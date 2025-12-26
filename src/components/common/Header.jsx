@@ -10,7 +10,6 @@ import {
   FaTimes,
   FaTrophy,
   FaChartLine,
-  FaMedal
 } from 'react-icons/fa'
 import { useUser } from '../../context/UserContext'
 import Icon from '../common/Icon'
@@ -26,7 +25,6 @@ const Header = () => {
     { path: '/', icon: FaRunning, label: 'Run' },
     { path: '/history', icon: FaHistory, label: 'History' },
     { path: '/goals', icon: FaTrophy, label: 'Goals' },
-    { path: '/leaderboard', icon: FaMedal, label: 'Leaderboard' },
     { path: '/stats', icon: FaChartLine, label: 'Stats' },
     { path: '/settings', icon: FaCog, label: 'Settings' }
   ];

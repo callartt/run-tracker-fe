@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { 
+import {
   FaRunning,
   FaHeartbeat,
   FaMapMarkerAlt,
@@ -8,7 +8,9 @@ import {
   FaChevronRight,
   FaInfoCircle,
   FaTrophy,
-  FaChartLine
+  FaChartLine,
+  FaUserFriends,
+  FaMedal
 } from 'react-icons/fa'
 import { formatDistance, formatDuration } from '../utils/calculations'
 import { useWorkout } from '../context/WorkoutContext'
@@ -23,14 +25,14 @@ const Home = () => {
   const { goals, calculateGoalProgress } = useGoals()
   const [hasLocationPermission, setHasLocationPermission] = useState(null)
   const [recentWorkouts, setRecentWorkouts] = useState([])
-  
+
   // Check if user has granted location permission
   useEffect(() => {
     const checkLocationPermission = async () => {
       try {
         const result = await navigator.permissions.query({ name: 'geolocation' })
         setHasLocationPermission(result.state === 'granted')
-        
+
         // Add listener for permission changes
         result.addEventListener('change', () => {
           setHasLocationPermission(result.state === 'granted')
@@ -40,10 +42,10 @@ const Home = () => {
         setHasLocationPermission(false)
       }
     }
-    
+
     checkLocationPermission()
   }, [])
-  
+
   // Get recent workouts
   useEffect(() => {
     if (workouts && workouts.length > 0) {
@@ -51,7 +53,7 @@ const Home = () => {
       setRecentWorkouts(recent)
     }
   }, [workouts])
-  
+
   // Calculate total stats
   const totalStats = workouts.reduce((stats, workout) => {
     return {
@@ -60,7 +62,7 @@ const Home = () => {
       totalDuration: stats.totalDuration + (workout.duration || 0)
     }
   }, { totalRuns: 0, totalDistance: 0, totalDuration: 0 })
-  
+
   // Handle start run button
   const handleStartRun = () => {
     if (activeWorkout) {
@@ -80,7 +82,7 @@ const Home = () => {
       }
     }
   }
-  
+
   return (
     <div>
       {/* Hero Section */}
@@ -90,7 +92,7 @@ const Home = () => {
         <p className="text-gray-600 dark:text-gray-300 mb-6">
           Record your outdoor runs with GPS tracking
         </p>
-        
+
         <button
           onClick={handleStartRun}
           className="btn-primary w-full py-3 text-lg font-medium"
@@ -98,7 +100,7 @@ const Home = () => {
           {activeWorkout ? 'Continue Run' : 'Start New Run'}
         </button>
       </div>
-      
+
       {/* Stats Overview */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-3">Your Activity</h2>
@@ -109,7 +111,7 @@ const Home = () => {
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Runs</div>
           </div>
-          
+
           <div className="card p-3 text-center">
             <div className="text-xl font-bold">
               {formatDistance(totalStats.totalDistance).split(' ')[0]}
@@ -118,7 +120,7 @@ const Home = () => {
               km
             </div>
           </div>
-          
+
           <div className="card p-3 text-center">
             <div className="text-xl font-bold">
               {Math.floor(totalStats.totalDuration / 60)}
@@ -127,28 +129,28 @@ const Home = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Goals Progress Section */}
       {goals && goals.length > 0 && (
         <div className="mt-6">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold">Current Goals</h2>
-            <Link 
-              to="/goals" 
+            <Link
+              to="/goals"
               className="text-primary text-sm flex items-center"
             >
               <span>View all</span>
               <FaChevronRight className="ml-1 text-xs" />
             </Link>
           </div>
-          
+
           <div className="space-y-3">
             {goals
               .filter(goal => !goal.isCompleted)
               .slice(0, 2)
               .map(goal => {
                 const progress = calculateGoalProgress(goal);
-                
+
                 return (
                   <Link key={goal.id} to="/goals" className="block">
                     <div className="card p-3">
@@ -157,10 +159,10 @@ const Home = () => {
                           <FaTrophy className="text-primary mr-2 text-sm" />
                           <div>
                             <span className="text-sm font-medium">
-                              {goal.type === 'distance' 
-                                ? 'Distance Goal' 
-                                : goal.type === 'duration' 
-                                  ? 'Time Goal' 
+                              {goal.type === 'distance'
+                                ? 'Distance Goal'
+                                : goal.type === 'duration'
+                                  ? 'Time Goal'
                                   : 'Runs Goal'}
                             </span>
                             <span className="text-xs text-gray-500 ml-1">
@@ -172,10 +174,10 @@ const Home = () => {
                           {progress.percentage}%
                         </span>
                       </div>
-                      
+
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="h-2 rounded-full bg-primary" 
+                        <div
+                          className="h-2 rounded-full bg-primary"
                           style={{ width: `${progress.percentage}%` }}
                         ></div>
                       </div>
@@ -183,7 +185,7 @@ const Home = () => {
                   </Link>
                 );
               })}
-              
+
             {goals.filter(goal => !goal.isCompleted).length === 0 && (
               <Link to="/goals" className="block">
                 <div className="card p-4 text-center">
@@ -197,69 +199,69 @@ const Home = () => {
           </div>
         </div>
       )}
-      
+
       {/* Recent Workouts */}
-    {recentWorkouts.length > 0 && (
-  <div className="mt-6">
-    <div className="flex justify-between items-center mb-3">
-      <h2 className="text-lg font-semibold">Recent Runs</h2>
-      <Link 
-        to="/history" 
-        className="text-primary text-sm flex items-center"
-      >
-        <span>View all</span>
-        <FaChevronRight className="ml-1 text-xs" />
-      </Link>
-    </div>
-    
-    <div className="space-y-3">
-      {recentWorkouts.map(workout => (
-        <Link
-          key={workout.id}
-          to={`/workout/${workout.id}`}
-          className="card p-4 flex items-center"
-        >
-          <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mr-4">
-            <FaRunning className="text-primary text-lg" />
+      {recentWorkouts.length > 0 && (
+        <div className="mt-6">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold">Recent Runs</h2>
+            <Link
+              to="/history"
+              className="text-primary text-sm flex items-center"
+            >
+              <span>View all</span>
+              <FaChevronRight className="ml-1 text-xs" />
+            </Link>
           </div>
-          
-          <div className="flex-1">
-            <div className="font-medium">
-              {/* Use workout name if available, otherwise show date */}
-              {workout.name || new Date(workout.startTime).toLocaleDateString(undefined, {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-              })}
-            </div>
-            
-            <div className="text-sm text-gray-600 dark:text-gray-300 flex flex-wrap">
-              <span className="flex items-center mr-3">
-                <FaMapMarkerAlt className="mr-1 text-xs" />
-                {formatDistance(workout.distance)}
-              </span>
-              
-              <span className="flex items-center mr-3">
-                <FaRunning className="mr-1 text-xs" />
-                {formatDuration(workout.duration)}
-              </span>
-              
-              {workout.avgHeartRate > 0 && (
-                <span className="flex items-center">
-                  <FaHeartbeat className="mr-1 text-xs text-red-500" />
-                  {workout.avgHeartRate} bpm
-                </span>
-              )}
-            </div>
+
+          <div className="space-y-3">
+            {recentWorkouts.map(workout => (
+              <Link
+                key={workout.id}
+                to={`/workout/${workout.id}`}
+                className="card p-4 flex items-center"
+              >
+                <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mr-4">
+                  <FaRunning className="text-primary text-lg" />
+                </div>
+
+                <div className="flex-1">
+                  <div className="font-medium">
+                    {/* Use workout name if available, otherwise show date */}
+                    {workout.name || new Date(workout.startTime).toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+
+                  <div className="text-sm text-gray-600 dark:text-gray-300 flex flex-wrap">
+                    <span className="flex items-center mr-3">
+                      <FaMapMarkerAlt className="mr-1 text-xs" />
+                      {formatDistance(workout.distance)}
+                    </span>
+
+                    <span className="flex items-center mr-3">
+                      <FaRunning className="mr-1 text-xs" />
+                      {formatDuration(workout.duration)}
+                    </span>
+
+                    {workout.avgHeartRate > 0 && (
+                      <span className="flex items-center">
+                        <FaHeartbeat className="mr-1 text-xs text-red-500" />
+                        {workout.avgHeartRate} bpm
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <FaChevronRight className="text-gray-400" />
+              </Link>
+            ))}
           </div>
-          
-          <FaChevronRight className="text-gray-400" />
-        </Link>
-      ))}
-    </div>
-  </div>
-    )}
-      
+        </div>
+      )}
+
       {/* Stats Dashboard Link - New Section */}
       <div className="mt-6">
         <Link to="/stats" className="card p-4 flex items-center">
@@ -275,53 +277,38 @@ const Home = () => {
           <FaChevronRight className="text-gray-400" />
         </Link>
       </div>
-      
+
       {/* App Features */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-3">Features</h2>
-        
+
         <div className="space-y-3">
-          <div className="card p-4">
+          <Link to="/friends" className="card p-4 block">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-4">
-                <FaMapMarkerAlt className="text-blue-500" />
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mr-4">
+                <FaUserFriends className="text-purple-500" />
               </div>
               <div>
-                <h3 className="font-medium">GPS Tracking</h3>
+                <h3 className="font-medium">Friends</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Track your route, distance, and pace in real-time
+                  Connect with friends and track their progress
                 </p>
               </div>
             </div>
-          </div>
-
-          <div className="card p-4">
+          </Link>
+          <Link to="/leaderboard" className="card p-4 block">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mr-4">
-                <FaTrophy className="text-yellow-500" />
+                <FaMedal className="text-yellow-500" />
               </div>
               <div>
-                <h3 className="font-medium">Goal Tracking</h3>
+                <h3 className="font-medium">Leaderboard</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Set and achieve your running goals and earn achievements
+                  See how you compare to other runners
                 </p>
               </div>
             </div>
-          </div>
-          
-          <div className="card p-4">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mr-4">
-                <FaShareAlt className="text-green-500" />
-              </div>
-              <div>
-                <h3 className="font-medium">Share & Challenge</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Share your runs and challenge friends to beat your time
-                </p>
-              </div>
-            </div>
-          </div>
+          </Link>
         </div>
       </div>
     </div>
