@@ -4,10 +4,11 @@ import RunMap from '../components/map/RunMap'
 import { useWorkout } from '../context/WorkoutContext'
 import { useUser } from '../context/UserContext'
 import { formatDistance, formatDuration } from '../utils/calculations'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const ActiveRun = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useUser()
 
   const {
@@ -27,6 +28,9 @@ const ActiveRun = () => {
     activeWorkout
   } = useWorkout()
 
+  // Extract challenge ID from navigation state if present
+  const challengeId = location.state?.challengeId || null
+
   useEffect(() => {
     if (!activeWorkout && !isRunning && duration === 0) {
       // navigate('/') 
@@ -39,7 +43,7 @@ const ActiveRun = () => {
     } else if (isPaused) {
       resumeWorkout()
     } else {
-      startWorkout()
+      startWorkout(challengeId) // Pass challengeId when starting workout
     }
   }
 

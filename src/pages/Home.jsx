@@ -309,6 +309,19 @@ const Home = () => {
               </div>
             </div>
           </Link>
+          <Link to="/challenges" className="card p-4 block">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mr-4">
+                <FaTrophy className="text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-medium">Challenges</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Compete against friends' runs
+                </p>
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

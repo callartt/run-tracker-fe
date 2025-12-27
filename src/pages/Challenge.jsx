@@ -1,75 +1,80 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { 
-  FaRunning, 
-  FaTrophy, 
-  FaMapMarkerAlt, 
-  FaStopwatch, 
+import {
+  FaRunning,
+  FaTrophy,
+  FaMapMarkerAlt,
+  FaStopwatch,
   FaHeartbeat,
   FaUserFriends,
   FaExclamationTriangle,
-  FaCheck,
   FaChevronLeft,
   FaPlay
 } from 'react-icons/fa'
-import { useWorkout } from '../context/WorkoutContext'
-import { useUser } from '../context/UserContext'
 import { formatDistance, formatDuration, calculatePace } from '../utils/calculations'
 import RunMap from '../components/map/RunMap'
+import { getChallenge, getChallengeAttempts } from '../api/challenges'
+
+import { useAuth } from '../context/AuthContext'
 
 const Challenge = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { workouts } = useWorkout()
-  const { user } = useUser()
-  const [challengeWorkout, setChallengeWorkout] = useState(null)
+  const { user } = useAuth()
+  const [challenge, setChallenge] = useState(null)
+  const [attempts, setAttempts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  
-  // In a real app, we would fetch the shared workout from a server
-  // For this demo, we'll find it in local workouts by its share ID
+
   useEffect(() => {
-    if (!workouts || workouts.length === 0) return
-    
-    setTimeout(() => {
+    const fetchData = async () => {
       try {
-        // Find workout with matching share ID
-        const workout = workouts.find(w => w.shareId === id)
-        
-        if (workout) {
-          setChallengeWorkout(workout)
-        } else {
-          setError('Challenge not found or has expired.')
-        }
+        const challengeResponse = await getChallenge(id)
+        setChallenge(challengeResponse.data)
+
+        // Fetch attempts for this challenge
+        const attemptsResponse = await getChallengeAttempts(id)
+        setAttempts(attemptsResponse.data)
       } catch (err) {
-        setError('Error loading challenge data.')
+        console.error(err)
+        setError('Challenge not found or error loading data.')
       } finally {
         setLoading(false)
       }
-    }, 1000) // Simulate API delay
-  }, [id, workouts])
-  
+    }
+
+    fetchData()
+  }, [id])
+
   // Format route data for the map
   const getRouteData = () => {
-    if (!challengeWorkout || !challengeWorkout.route) return []
-    
-    return challengeWorkout.route.map(point => ({
+    if (!challenge || !challenge.source_run || !challenge.source_run.route) return []
+
+    return challenge.source_run.route.map(point => ({
       latitude: point.lat,
       longitude: point.lng,
       ...point
     }))
   }
-  
+
   // Accept challenge and start a new run
   const acceptChallenge = () => {
-    navigate('/run')
+    // Navigate to ActiveRun with challenge data
+    navigate('/run', {
+      state: {
+        challengeId: challenge.uuid,
+        ghostRoute: challenge.source_run.route,
+        targetDistance: challenge.source_run.distance,
+        targetDuration: challenge.source_run.duration
+      }
+    })
   }
-  
+
   // Go back
   const goBack = () => {
     navigate(-1)
   }
-  
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -78,13 +83,13 @@ const Challenge = () => {
       </div>
     )
   }
-  
+
   if (error) {
     return (
       <div className="py-8">
         <div className="card p-6 text-center">
           <FaExclamationTriangle className="text-yellow-500 text-5xl mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Challenge Not Found</h2>
+          <h2 className="text-xl font-bold mb-2">Error</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             {error}
           </p>
@@ -98,11 +103,15 @@ const Challenge = () => {
       </div>
     )
   }
-  
-  if (!challengeWorkout) return null
-  
+
+  if (!challenge) return null
+
   const route = getRouteData()
-  
+  const { source_run } = challenge
+  const isCreator = user && challenge.creator_id === user.uuid
+
+  console.log("source_run:", source_run)
+
   return (
     <div className="pb-16">
       {/* Header */}
@@ -114,9 +123,9 @@ const Challenge = () => {
         >
           <FaChevronLeft />
         </button>
-        <h1 className="text-xl font-bold">Challenge</h1>
+        <h1 className="text-xl font-bold">Challenge Details</h1>
       </div>
-      
+
       {/* Challenge Card */}
       <div className="card p-6 mb-4">
         <div className="flex items-center justify-center mb-4">
@@ -124,16 +133,15 @@ const Challenge = () => {
             <FaTrophy className="text-yellow-500 text-2xl" />
           </div>
         </div>
-        
+
         <h2 className="text-lg font-bold text-center mb-1">
-          You've Been Challenged!
+          {challenge.name}
         </h2>
-        
+
         <p className="text-center text-gray-600 dark:text-gray-300 mb-4">
-          Someone has challenged you to beat their run.
-          Can you complete this distance in a faster time?
+          {challenge.description || "Can you beat this run?"}
         </p>
-        
+
         <div className="border-t border-b border-gray-200 dark:border-gray-700 py-4 mb-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Distance */}
@@ -142,30 +150,30 @@ const Challenge = () => {
               <div className="flex items-center justify-center mt-1">
                 <FaMapMarkerAlt className="text-primary mr-1" />
                 <span className="text-xl font-bold">
-                  {formatDistance(challengeWorkout.distance)}
+                  {formatDistance(source_run.distance)}
                 </span>
               </div>
             </div>
-            
+
             {/* Time to Beat */}
             <div className="text-center">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Time to Beat</h3>
               <div className="flex items-center justify-center mt-1">
                 <FaStopwatch className="text-primary mr-1" />
                 <span className="text-xl font-bold">
-                  {formatDuration(challengeWorkout.duration)}
+                  {formatDuration(source_run.duration * 60)}
                 </span>
               </div>
             </div>
-            
+
             {/* Pace */}
             <div className="text-center">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pace</h3>
               <div className="flex items-center justify-center mt-1">
                 <FaRunning className="text-primary mr-1" />
                 <span className="text-xl font-bold">
-                  {challengeWorkout.distance > 0 && challengeWorkout.duration > 0 
-                    ? calculatePace(challengeWorkout.distance / challengeWorkout.duration) 
+                  {source_run.distance > 0 && source_run.duration > 0
+                    ? calculatePace(source_run.distance * 1000 / (source_run.duration * 60))
                     : '--:--'}
                 </span>
                 <span className="text-sm text-gray-500 ml-1">
@@ -173,50 +181,98 @@ const Challenge = () => {
                 </span>
               </div>
             </div>
-            
-            {/* Heart Rate */}
-            {challengeWorkout.avgHeartRate > 0 && (
-              <div className="text-center">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Heart Rate</h3>
-                <div className="flex items-center justify-center mt-1">
-                  <FaHeartbeat className="text-red-500 mr-1" />
-                  <span className="text-xl font-bold">
-                    {challengeWorkout.avgHeartRate}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-1">
-                    bpm
-                  </span>
-                </div>
+
+            {/* Creator */}
+            <div className="text-center">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Challenger</h3>
+              <div className="flex items-center justify-center mt-1">
+                <FaUserFriends className="text-blue-500 mr-1" />
+                <span className="text-xl font-bold">
+                  {challenge.creator?.username || 'Unknown'}
+                </span>
               </div>
-            )}
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-center justify-center mb-4">
-          <FaUserFriends className="text-gray-500 mr-2" />
-          <span className="text-sm text-gray-600 dark:text-gray-300">
-            Completed on {new Date(challengeWorkout.endTime).toLocaleDateString()}
-          </span>
-        </div>
-        
-        <button
-          onClick={acceptChallenge}
-          className="btn-primary w-full py-3 flex items-center justify-center"
-        >
-          <FaPlay className="mr-2" />
-          Accept Challenge
-        </button>
+
+        {isCreator ? (
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-center">
+            <p className="font-medium">This is your challenge!</p>
+            <p className="text-sm">Share it with friends to see if they can beat it.</p>
+          </div>
+        ) : (
+          <button
+            onClick={acceptChallenge}
+            className="btn-primary w-full py-3 flex items-center justify-center"
+          >
+            <FaPlay className="mr-2" />
+            Accept Challenge
+          </button>
+        )}
       </div>
-      
+
       {/* Route Map */}
       {route.length > 0 && (
         <div>
           <h3 className="font-medium mb-2">Challenge Route</h3>
-          <RunMap 
-            route={route} 
-            mapHeight="h-64" 
+          <RunMap
+            route={route}
+            mapHeight="h-64"
             showMarkers={true}
           />
+        </div>
+      )}
+
+      {/* Attempts Section */}
+      {attempts.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-bold mb-3">Attempts ({attempts.length})</h3>
+          <div className="space-y-3">
+            {attempts.map((attempt) => (
+              <div
+                key={attempt.uuid}
+                className={`card p-4 ${attempt.success ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <FaUserFriends className="text-blue-500 mr-2" />
+                    <span className="font-medium">{attempt.user?.username || 'Unknown'}</span>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${attempt.success
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}>
+                    {attempt.success ? 'Success!' : 'Failed'}
+                  </span>
+                </div>
+
+                {attempt.run && (
+                  <div className="grid grid-cols-3 gap-2 text-sm mt-3">
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Distance</div>
+                      <div className="font-medium">{formatDistance(attempt.run.distance)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Time</div>
+                      <div className="font-medium">{formatDuration(attempt.run.duration * 60)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Pace</div>
+                      <div className="font-medium">
+                        {attempt.run.distance > 0 && attempt.run.duration > 0
+                          ? calculatePace(attempt.run.distance * 1000 / (attempt.run.duration * 60))
+                          : '--:--'} min/km
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {new Date(attempt.created_at).toLocaleDateString()} at {new Date(attempt.created_at).toLocaleTimeString()}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

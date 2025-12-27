@@ -13,6 +13,7 @@ import History from './pages/History'
 import WorkoutDetailPage from './pages/WorkoutDetail.jsx'
 import Settings from './pages/Settings'
 import Challenge from './pages/Challenge'
+import Challenges from './pages/Challenges'
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 // Import the missing components (you'll need to ensure these exist)
@@ -78,6 +79,7 @@ function App() {
                     <Route path="/stats" element={<Statistics />} />
                     <Route path="/leaderboard" element={<Leaderboard />} />
                     <Route path="/friends" element={<Friends />} />
+                    <Route path="/challenges" element={<Challenges />} />
                     <Route path="/challenge/:id" element={<Challenge />} />
                   </Route>
                 </Routes>
