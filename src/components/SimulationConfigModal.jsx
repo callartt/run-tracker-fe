@@ -83,7 +83,7 @@ export default function SimulationConfigModal({ isOpen, onClose }) {
                         <input
                             type="number"
                             min="1"
-                            max="100"
+                            max="1000"
                             value={speed}
                             onChange={(e) => setSpeed(Number(e.target.value))}
                             className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"

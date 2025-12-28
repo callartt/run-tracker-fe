@@ -25,17 +25,23 @@ const ActiveRun = () => {
     resumeWorkout,
     finishWorkout,
     getCurrentPosition,
-    activeWorkout
+    activeWorkout,
+    resetWorkout
   } = useWorkout()
 
   // Extract challenge ID from navigation state if present
   const challengeId = location.state?.challengeId || null
 
+  // Cleanup when navigating away without finishing
   useEffect(() => {
-    if (!activeWorkout && !isRunning && duration === 0) {
-      // navigate('/') 
+    return () => {
+      // Only reset if there's an active workout that wasn't finished
+      // (if finished, activeWorkout would be null)
+      if (activeWorkout || isRunning || duration > 0) {
+        resetWorkout()
+      }
     }
-  }, [activeWorkout, isRunning, duration, navigate])
+  }, []) // Empty dependency array - only run on unmount
 
   const handleTogglePlay = () => {
     if (isRunning && !isPaused) {

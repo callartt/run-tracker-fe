@@ -25,7 +25,8 @@ export const WorkoutProvider = ({ children }) => {
     error: geoError,
     startTracking,
     stopTracking,
-    getCurrentPosition
+    getCurrentPosition,
+    resetTracking
   } = useGeolocation(isRunning && !isPaused)
 
   const timerRef = useRef(null)
@@ -244,6 +245,18 @@ export const WorkoutProvider = ({ children }) => {
     }
   }
 
+  const resetWorkout = () => {
+    stopTracking()
+    resetTracking()
+    GeoSimulator.stop()
+    setIsRunning(false)
+    setIsPaused(false)
+    setDuration(0)
+    setHeartRateData([])
+    setActiveWorkout(null)
+    setActiveChallengeId(null)
+  }
+
   const renameWorkout = async (id, newName) => {
     // Optimistic update
     const previousWorkouts = [...workouts]
@@ -315,7 +328,8 @@ export const WorkoutProvider = ({ children }) => {
         deleteWorkout,
         shareWorkout,
         renameWorkout,
-        getCurrentPosition
+        getCurrentPosition,
+        resetWorkout
       }}
     >
       {children}

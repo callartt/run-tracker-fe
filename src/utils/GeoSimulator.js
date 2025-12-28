@@ -65,24 +65,32 @@ class GeoSimulator {
     this.currentLat = null
     this.currentLng = null
 
-    this.selectedRoute = 'KHRESHCHATYK_PEIZAZHNA'
-    this.baseSpeedKmh = 10
+    // Load from localStorage or use defaults
+    const savedRoute = localStorage.getItem('simulation_route')
+    const savedSpeed = localStorage.getItem('simulation_speed')
+
+    this.selectedRoute = savedRoute && ROUTES[savedRoute] ? savedRoute : 'KHRESHCHATYK_PEIZAZHNA'
+    this.baseSpeedKmh = savedSpeed ? Number(savedSpeed) : 10
     this.updateInterval = 1000
   }
 
   // Configure simulation before starting
   configure(routeKey, speedKmh) {
+    // Allow speed updates anytime
+    if (speedKmh && speedKmh > 0) {
+      this.baseSpeedKmh = speedKmh
+    }
+
+    // Only allow route updates when not active to avoid jumps
     if (this.isActive) {
-      console.warn('Cannot configure while simulation is running')
-      return false
+      if (routeKey && routeKey !== this.selectedRoute) {
+        console.warn('Cannot change route while simulation is running')
+      }
+      return true
     }
 
     if (routeKey && ROUTES[routeKey]) {
       this.selectedRoute = routeKey
-    }
-
-    if (speedKmh && speedKmh > 0 && speedKmh <= 100) {
-      this.baseSpeedKmh = speedKmh
     }
 
     return true

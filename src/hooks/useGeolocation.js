@@ -7,7 +7,7 @@ const useGeolocation = (isRunning = true) => {
   const [route, setRoute] = useState([])
   const [distance, setDistance] = useState(0)
   const [isTracking, setIsTracking] = useState(false)
-  
+
   const watchIdRef = useRef(null)
   const lastPositionRef = useRef(null)
   const isRunningRef = useRef(isRunning)
@@ -16,7 +16,7 @@ const useGeolocation = (isRunning = true) => {
   useEffect(() => {
     isRunningRef.current = isRunning
   }, [isRunning])
-  
+
   const normalizePosition = useCallback((pos) => {
     if (!pos) return null
 
@@ -65,39 +65,39 @@ const useGeolocation = (isRunning = true) => {
 
       if (dist > 500) {
         if (isSimulationSource) {
-           lastPositionRef.current = newPosition
-           setRoute(prev => [...prev, newPosition])
+          lastPositionRef.current = newPosition
+          setRoute(prev => [...prev, newPosition])
         }
         return
       }
 
       if (isSimulationSource || dist >= 3) {
         setDistance(prev => prev + dist)
-        
+
         lastPositionRef.current = newPosition
-        
+
         setRoute(prevRoute => {
-            if (prevRoute.length === 0) return [newPosition]
-      
-            const lastRoutePoint = prevRoute[prevRoute.length - 1]
-            const distFromLastRoutePoint = calculateDistance(
-              lastRoutePoint.latitude, 
-              lastRoutePoint.longitude, 
-              newPosition.latitude, 
-              newPosition.longitude
-            )
-            
-            const drawThreshold = isSimulationSource ? 2 : 5
-            
-            if (distFromLastRoutePoint >= drawThreshold) {
-              return [...prevRoute, newPosition]
-            }
-            return prevRoute
-          })
+          if (prevRoute.length === 0) return [newPosition]
+
+          const lastRoutePoint = prevRoute[prevRoute.length - 1]
+          const distFromLastRoutePoint = calculateDistance(
+            lastRoutePoint.latitude,
+            lastRoutePoint.longitude,
+            newPosition.latitude,
+            newPosition.longitude
+          )
+
+          const drawThreshold = isSimulationSource ? 2 : 5
+
+          if (distFromLastRoutePoint >= drawThreshold) {
+            return [...prevRoute, newPosition]
+          }
+          return prevRoute
+        })
       }
     } else {
-        lastPositionRef.current = newPosition
-        setRoute([newPosition])
+      lastPositionRef.current = newPosition
+      setRoute([newPosition])
     }
 
   }, [normalizePosition])
@@ -127,7 +127,7 @@ const useGeolocation = (isRunning = true) => {
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     )
-    
+
     watchIdRef.current = id
   }, [handlePositionUpdate])
 
@@ -171,6 +171,14 @@ const useGeolocation = (isRunning = true) => {
     }
   }, [])
 
+  const resetTracking = useCallback(() => {
+    setRoute([])
+    setDistance(0)
+    setPosition(null)
+    lastPositionRef.current = null
+    isSimulatingRef.current = false
+  }, [])
+
   return {
     position,
     error,
@@ -179,7 +187,8 @@ const useGeolocation = (isRunning = true) => {
     isTracking,
     startTracking,
     stopTracking,
-    getCurrentPosition
+    getCurrentPosition,
+    resetTracking
   }
 }
 
