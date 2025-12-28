@@ -17,6 +17,7 @@ import { useWorkout } from '../context/WorkoutContext'
 import { useUser } from '../context/UserContext'
 import RunMap from '../components/map/RunMap'
 import { useGoals } from '../context/GoalsContext'
+import SimulationConfigModal from '../components/SimulationConfigModal'
 
 const Home = () => {
   const navigate = useNavigate()
@@ -25,6 +26,7 @@ const Home = () => {
   const { goals, calculateGoalProgress } = useGoals()
   const [hasLocationPermission, setHasLocationPermission] = useState(null)
   const [recentWorkouts, setRecentWorkouts] = useState([])
+  const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false)
 
   // Check if user has granted location permission
   useEffect(() => {
@@ -93,13 +95,28 @@ const Home = () => {
           Record your outdoor runs with GPS tracking
         </p>
 
-        <button
-          onClick={handleStartRun}
-          className="btn-primary w-full py-3 text-lg font-medium"
-        >
-          {activeWorkout ? 'Continue Run' : 'Start New Run'}
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={handleStartRun}
+            className="btn-primary w-full py-3 text-lg font-medium"
+          >
+            {activeWorkout ? 'Continue Run' : 'Start New Run'}
+          </button>
+
+          <button
+            onClick={() => setIsSimulationModalOpen(true)}
+            className="w-full py-3 text-lg font-medium bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+          >
+            🧪 Configure Simulation
+          </button>
+        </div>
       </div>
+
+      {/* Simulation Config Modal */}
+      <SimulationConfigModal
+        isOpen={isSimulationModalOpen}
+        onClose={() => setIsSimulationModalOpen(false)}
+      />
 
       {/* Stats Overview */}
       <div className="mt-6">
@@ -117,7 +134,7 @@ const Home = () => {
               {formatDistance(totalStats.totalDistance).split(' ')[0]}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              km
+              {formatDistance(totalStats.totalDistance).split(' ')[1]}
             </div>
           </div>
 

@@ -221,8 +221,7 @@ export const WorkoutProvider = ({ children }) => {
         try {
           const { attemptChallenge } = await import('../api/challenges');
           await attemptChallenge(activeChallengeId, {
-            run_id: response.data.uuid,
-            success: true // For now, always set to true as requested
+            run_id: response.data.uuid
           });
           console.log('Challenge attempt created successfully');
         } catch (attemptError) {
